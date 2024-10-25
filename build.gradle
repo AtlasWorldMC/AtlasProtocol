@@ -69,8 +69,8 @@ subprojects {
                 }
 
                 pom {
-                    name = 'AtlasProtocol'
-                    description = "AtlasWorld's Networking Protocol Library."
+                    name = project.name
+                    description = project.description
                     licenses {
                         license {
                             name = "AtlasWorld's Proprietary License"
