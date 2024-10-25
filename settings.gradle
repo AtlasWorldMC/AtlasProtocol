@@ -1,5 +1,4 @@
 rootProject.name = 'AtlasProtocol'
-include 'api'
 include 'core'
 include 'api'
 include 'protocol'
