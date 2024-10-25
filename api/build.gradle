@@ -1,0 +1,8 @@
+dependencies {
+    api "fr.atlasworld.common:common:${atlas_common_version}"
+    api "fr.atlasworld.common:concurrent:${atlas_common_version}"
+}
+
+java {
+    withJavadocJar()
+}
