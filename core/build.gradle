@@ -1,3 +1,8 @@
+plugins {
+    id 'java-library'
+    id 'com.google.protobuf' version '0.9.4'
+}
+
 dependencies {
     implementation project(":api")
 
@@ -10,4 +15,20 @@ dependencies {
     testImplementation "org.apache.logging.log4j:log4j-core:${log4j_version}"
     testImplementation "org.apache.logging.log4j:log4j-api:${log4j_version}"
     testImplementation "org.apache.logging.log4j:log4j-slf4j2-impl:${log4j_version}"
+}
+
+protobuf {
+    protoc {
+        // Path to the `protoc` compiler executable, or just specify 'protoc' if it's in your PATH
+        artifact = "com.google.protobuf:protoc:${protobuf_version}"
+    }
+    generatedFilesBaseDir = "$projectDir/src/generated"
+}
+
+sourceSets {
+    main {
+        proto {
+
+        }
+    }
 }

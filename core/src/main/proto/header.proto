@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+option java_package = "fr.atlasworld.protocol.generated";
+option java_outer_classname = "HeaderWrapper";
+
+message Header {
+  uint64 time = 1;
+  fixed64 id_most_sig = 2;
+  fixed64 id_least_sig = 3;
+
+  optional string request = 4;
+  optional sint32 code = 5;
+  optional uint64 timeout = 6;
+}
