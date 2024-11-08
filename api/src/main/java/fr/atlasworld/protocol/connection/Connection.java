@@ -1,12 +1,16 @@
 package fr.atlasworld.protocol.connection;
 
+import com.google.protobuf.Message;
 import fr.atlasworld.common.concurrent.action.FutureAction;
 import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.protocol.event.ConnectionEvent;
+import fr.atlasworld.protocol.packet.Response;
+import fr.atlasworld.registry.RegistryKey;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.InetSocketAddress;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Represents a current active connection between server and client.
@@ -38,7 +42,7 @@ public interface Connection {
      *
      * @return current ping of the connection, {@code -1} if the connection has been terminated.
      */
-    long ping();
+    int ping();
 
     /**
      * Checks whether the connection is connected.
@@ -66,9 +70,24 @@ public interface Connection {
     InetSocketAddress remoteAddress();
 
     /**
+     * Send a packet to the remote.
+     *
+     * @param key key of the packet.
+     * @param payload payload to be sent within the packet.
+     * @param response protobuf generated class expected as response.
+     *
+     * @return future that will contain the response from remote,
+     *         or fail if something went wrong during sending or receiving.
+     */
+    <P extends Message, R extends Message> CompletableFuture<Response<R>> sendPacket(@NotNull RegistryKey key, @NotNull P payload, @NotNull Class<R> response);
+
+    /**
      * Disconnects this connection.
+     *
+     * @param force disconnects the connection even if the disconnection failed,
+     *              this will simply interrupt the connection.
      *
      * @return future that will be completed when the connection has been terminated.
      */
-    FutureAction<Void> disconnect();
+    CompletableFuture<Void> disconnect(boolean force);
 }

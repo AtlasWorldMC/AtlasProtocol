@@ -1,8 +1,9 @@
 dependencies {
     api "fr.atlasworld.common:common:${atlas_common_version}"
     api "fr.atlasworld.common:concurrent:${atlas_common_version}"
-
     api "fr.atlasworld.event:flow:${eventflow_version}"
+    api "fr.atlasworld:registry:${atlas_registries_version}"
+
     api "com.google.protobuf:protobuf-java:${protobuf_version}"
 }
 

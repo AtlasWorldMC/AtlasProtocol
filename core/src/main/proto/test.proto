@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+option java_package = "fr.atlasworld.protocol.generated";
+option java_outer_classname = "Test";
+
+message Request {
+  uint64 time = 1;
+}
+
+message Response {
+  uint64 code = 1;
+}
