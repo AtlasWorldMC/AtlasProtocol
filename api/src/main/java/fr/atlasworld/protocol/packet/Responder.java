@@ -46,12 +46,12 @@ public interface Responder {
      *
      * @throws UnsupportedOperationException if the requested was already responded to.
      */
-    <M extends Message> CompletableFuture<Void> respond(M response);
+    <M extends Message> CompletableFuture<Void> respond(M response, short code);
 
     /**
      * Sends an empty response of the request.
      *
      * @return future of the response.
      */
-    CompletableFuture<Void> respondEmpty();
+    CompletableFuture<Void> respondEmpty(short code);
 }

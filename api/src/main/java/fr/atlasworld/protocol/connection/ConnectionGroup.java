@@ -28,6 +28,11 @@ public interface ConnectionGroup {
 
     /**
      * Retrieve the average ping of all connections.
+     * <p>
+     * If the ping of a connection is not yet calculated (equals {@code -1}),
+     * it won't be added to the average.
+     *
+     * @see Connection#ping()
      *
      * @return the average ping.
      */

@@ -42,6 +42,7 @@ public interface Connection {
      *
      * @return public key of the connection.
      */
+    @NotNull
     PublicKey publicKey();
 
     /**
