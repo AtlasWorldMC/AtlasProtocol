@@ -27,13 +27,6 @@ public interface ConnectionGroup {
     EventNode<ConnectionEvent> eventNode();
 
     /**
-     * Checks whether the connection group contains unsafe/untrusted connections.
-     *
-     * @return true if the connection group contains unsafe connections.
-     */
-    boolean unsafe();
-
-    /**
      * Retrieve the average ping of all connections.
      *
      * @return the average ping.
@@ -60,7 +53,7 @@ public interface ConnectionGroup {
      *
      * @return a set of future for every remote the packet was sent to.
      */
-    <P extends Message, R extends Message> Set<CompletableFuture<Response<R>>> sendPacket(@NotNull RegistryKey key, @NotNull P payload, @NotNull Class<R> response, boolean trustedOnly);
+    <P extends Message, R extends Message> Set<CompletableFuture<Response<R>>> sendPacket(@NotNull RegistryKey key, @NotNull P payload, @NotNull Class<R> response);
 
     /**
      * Retrieve all connections in this group.

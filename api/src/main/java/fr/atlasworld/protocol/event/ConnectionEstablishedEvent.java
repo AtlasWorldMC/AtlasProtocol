@@ -12,27 +12,27 @@ import java.time.Duration;
  */
 @ThreadSafe
 public class ConnectionEstablishedEvent extends ConnectionEvent {
-    private final boolean insecureConnection;
+    private final boolean customAuth;
     private final Duration handshakeDuration;
 
-    public ConnectionEstablishedEvent(@NotNull Connection connection, boolean insecureConnection, @NotNull Duration handshakeDuration) {
+    public ConnectionEstablishedEvent(@NotNull Connection connection, boolean customAuth, @NotNull Duration handshakeDuration) {
         super(connection);
 
         Preconditions.checkNotNull(handshakeDuration);
 
-        this.insecureConnection = insecureConnection;
+        this.customAuth = customAuth;
         this.handshakeDuration = handshakeDuration;
     }
 
     /**
-     * Retrieve whether the connection is unsecured.
+     * Retrieve whether the connection was authenticated using a custom authenticator.
      * <p>
-     * An insecure connection means that the connection has not yet been authenticated.
+     * The custom authenticator means that it wasn't authenticated using the traditional way.
      *
-     * @return true if the connection is unsecure, false otherwise.
+     * @return true if the connection was authenticated using a custom authenticator, false otherwise.
      */
-    public boolean insecureConnection() {
-        return this.insecureConnection;
+    public boolean customAuth() {
+        return this.customAuth;
     }
 
     /**

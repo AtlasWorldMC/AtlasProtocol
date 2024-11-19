@@ -1,7 +1,6 @@
 package fr.atlasworld.protocol.connection;
 
 import com.google.protobuf.Message;
-import fr.atlasworld.common.concurrent.action.FutureAction;
 import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.protocol.event.ConnectionEvent;
 import fr.atlasworld.protocol.packet.Response;
@@ -9,6 +8,7 @@ import fr.atlasworld.registry.RegistryKey;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.InetSocketAddress;
+import java.security.PublicKey;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -38,6 +38,13 @@ public interface Connection {
     UUID identifier();
 
     /**
+     * Retrieve the public key of the connection.
+     *
+     * @return public key of the connection.
+     */
+    PublicKey publicKey();
+
+    /**
      * Ping (or latency) between the packets being sent and received.
      *
      * @return current ping of the connection, {@code -1} if the connection has been terminated.
@@ -53,13 +60,6 @@ public interface Connection {
      * @return true if the connection is connected, false otherwise.
      */
     boolean connected();
-
-    /**
-     * Checks whether the connection is authenticated.
-     *
-     * @return true if the connected is authenticated, false otherwise.
-     */
-    boolean authenticated();
 
     /**
      * Retrieve the remote address.

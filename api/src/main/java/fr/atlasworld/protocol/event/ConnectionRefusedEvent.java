@@ -57,6 +57,11 @@ public class ConnectionRefusedEvent extends ConnectionEvent {
         /**
          * The connection was not authorized to connect.
          */
-        UNAUTHORIZED;
+        UNAUTHORIZED,
+
+        /**
+         * Used when the connection is blacklisted from connecting.
+         */
+        BLACKLISTED;
     }
 }
