@@ -1,5 +1,7 @@
 package fr.atlasworld.protocol.socket;
 
+import fr.atlasworld.event.api.Event;
+import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.protocol.Side;
 import fr.atlasworld.protocol.connection.ConnectionGroupImpl;
 import fr.atlasworld.protocol.packet.Packet;
@@ -23,21 +25,25 @@ public class ServerSocketImpl implements ServerSocket {
     private final InetSocketAddress address;
     private final KeyPair sessionKeyPair;
 
-    private final Registry<Packet<?>> registry;
     private final ServerBootstrap bootstrap;
 
-    private f
+    private final Registry<Packet<?>> registry;
+    private final EventNode<Event> rootNode;
 
+    private final ConnectionGroupImpl globalConnectionGroup;
 
     private EventLoopGroup bossGroup, workerGroup;
     private Channel serverChannel;
     private boolean running;
 
-    private ServerSocketImpl(ServerBootstrap bootstrap, InetSocketAddress bindAddress, KeyPair sessionKeyPair, Registry<Packet<?>> registry) {
+    private ServerSocketImpl(ServerBootstrap bootstrap, EventNode<Event> rootNode, InetSocketAddress bindAddress, KeyPair sessionKeyPair, Registry<Packet<?>> registry) {
         this.address = bindAddress;
         this.sessionKeyPair = sessionKeyPair;
 
         this.registry = registry;
+        this.rootNode = rootNode;
+
+        this.globalConnectionGroup = new ConnectionGroupImpl();
 
         this.bootstrap = bootstrap;
         this.bootstrap.channel(NioServerSocketChannel.class);
@@ -46,7 +52,7 @@ public class ServerSocketImpl implements ServerSocket {
 
     @Override
     public @NotNull ConnectionGroupImpl connections() {
-
+        return this.globalConnectionGroup;
     }
 
     @Override
