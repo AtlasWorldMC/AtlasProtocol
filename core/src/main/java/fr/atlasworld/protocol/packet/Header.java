@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import fr.atlasworld.protocol.generated.HeaderWrapper;
 import fr.atlasworld.protocol.packet.header.RequestHeader;
 import fr.atlasworld.protocol.packet.header.ResponseHeader;
+import fr.atlasworld.registry.RegistryKey;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
@@ -52,11 +53,11 @@ public class Header implements ResponseHeader, RequestHeader {
     }
 
     @Override
-    public @NotNull String request() {
+    public @NotNull RegistryKey request() {
         if (this.responseHeader)
             throw new UnsupportedOperationException("Only requests headers contains this field!");
 
-        return this.header.getRequest();
+        return RegistryKey.fromString(this.header.getRequest()).orElseThrow();
     }
 
     public boolean isResponseHeader() {

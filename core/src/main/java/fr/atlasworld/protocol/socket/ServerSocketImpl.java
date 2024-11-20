@@ -2,6 +2,7 @@ package fr.atlasworld.protocol.socket;
 
 import fr.atlasworld.event.api.Event;
 import fr.atlasworld.event.api.EventNode;
+import fr.atlasworld.protocol.ApiBridge;
 import fr.atlasworld.protocol.Side;
 import fr.atlasworld.protocol.connection.ConnectionGroupImpl;
 import fr.atlasworld.protocol.packet.Packet;
@@ -34,7 +35,7 @@ public class ServerSocketImpl implements ServerSocket {
 
     private EventLoopGroup bossGroup, workerGroup;
     private Channel serverChannel;
-    private boolean running;
+    private volatile boolean running;
 
     private ServerSocketImpl(ServerBootstrap bootstrap, EventNode<Event> rootNode, InetSocketAddress bindAddress, KeyPair sessionKeyPair, Registry<Packet<?>> registry) {
         this.address = bindAddress;
@@ -100,14 +101,22 @@ public class ServerSocketImpl implements ServerSocket {
             this.running = true;
 
             this.serverChannel.closeFuture().addListener(closeFuture -> {
+                this.globalConnectionGroup.disconnect(true).join();
+                this.running = false;
 
-            })
+                this.cleanUp();
+            });
         });
+
+        return ApiBridge.waitOnChannel(future);
     }
 
     @Override
     public CompletableFuture<Void> stop(boolean interrupt) {
+        if (!this.running)
+            throw new IllegalStateException("Socket is not running!");
 
+        return ApiBridge.waitOnChannel(this.serverChannel.close());
     }
 
     private void cleanUp() {

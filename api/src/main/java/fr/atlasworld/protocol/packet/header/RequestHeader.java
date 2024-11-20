@@ -1,5 +1,6 @@
 package fr.atlasworld.protocol.packet.header;
 
+import fr.atlasworld.registry.RegistryKey;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -20,5 +21,5 @@ public interface RequestHeader extends Header {
      * @return request key.
      */
     @NotNull
-    String request();
+    RegistryKey request();
 }

@@ -12,7 +12,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class ConnectionGroupImpl implements ConnectionGroup {
     private final Set<ConnectionImpl> connections;
@@ -36,40 +36,41 @@ public class ConnectionGroupImpl implements ConnectionGroup {
         int connectionCount = 0;
         int totalPing = 0;
 
-        for (Connection connection : this.connections) {
-            if (!connection.connected() || connection.ping() == -1)
-                continue;
+        this.lock.readLock().lock();
+        try {
+            for (Connection connection : this.connections) {
+                if (!connection.connected() || connection.ping() == -1)
+                    continue;
 
-            totalPing += connection.ping();
-            connectionCount++;
+                totalPing += connection.ping();
+                connectionCount++;
+            }
+        } finally {
+            this.lock.readLock().unlock();
         }
 
-        this.lock.readLock().unlock();
-
-        if (connectionCount < 1) {
-            return -1;
-        }
-
-        return totalPing / connectionCount;
+        return connectionCount > 0 ? (totalPing / connectionCount) : -1;
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public CompletableFuture<Void> disconnect(boolean force) {
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        CompletableFuture<Void>[] futures;
 
         this.lock.readLock().lock();
-        for (Connection connection : this.connections) {
-            if (!connection.connected())
-                continue;
-
-            futures.add(connection.disconnect(force));
+        try {
+            futures = this.connections.stream()
+                    .filter(ConnectionImpl::connected)
+                    .map(connection -> connection.disconnect(force))
+                    .toArray(CompletableFuture[]::new);
+        } finally {
+            this.lock.readLock().unlock();
         }
-        this.lock.readLock().unlock();
 
-        if (futures.isEmpty())
+        if (futures.length == 0)
             return CompletableFuture.completedFuture(null);
 
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        return CompletableFuture.allOf(futures);
     }
 
     @Override
@@ -78,57 +79,50 @@ public class ConnectionGroupImpl implements ConnectionGroup {
         Preconditions.checkNotNull(payload);
         Preconditions.checkNotNull(response);
 
-        Set<CompletableFuture<Response<R>>> futures = new HashSet<>();
-
         this.lock.readLock().lock();
-        for (Connection connection : this.connections) {
-            if (!connection.connected())
-                continue;
-
-            futures.add(connection.sendPacket(key, payload, response));
+        try {
+            return this.connections.stream()
+                    .filter(ConnectionImpl::connected)
+                    .map(connection -> connection.sendPacket(key, payload, response))
+                    .collect(Collectors.toUnmodifiableSet());
+        } finally {
+            this.lock.readLock().unlock();
         }
-        this.lock.readLock().unlock();
-
-        if (futures.isEmpty())
-            return Set.of();
-
-        return futures;
     }
 
     @Override
     public Set<Connection> connections() {
-        Set<Connection> immutableConnections;
-
         this.lock.readLock().lock();
-        immutableConnections = Set.copyOf(this.connections);
-        this.lock.readLock().unlock();
-
-        return immutableConnections;
+        try {
+            return Collections.unmodifiableSet(this.connections);
+        } finally {
+            this.lock.readLock().unlock();
+        }
     }
 
     public void registerConnection(@NotNull ConnectionImpl connection) {
         Preconditions.checkNotNull(connection);
+        Preconditions.checkArgument(connection.connected(), "Connection is no longer connected!");
 
         this.lock.writeLock().lock();
+        try {
+            if (this.connections.contains(connection))
+                throw new IllegalArgumentException("Connection already present!");
 
-        if (this.connections.contains(connection)) {
+            this.connections.add(connection);
+        } finally {
             this.lock.writeLock().unlock();
-            throw new IllegalArgumentException("Connection already present!");
         }
-
-        this.connections.add(connection);
-        this.lock.writeLock().unlock();
-
-        return;
     }
 
     public boolean unregisterConnection(@NotNull ConnectionImpl connection) {
         Preconditions.checkNotNull(connection);
 
         this.lock.writeLock().lock();
-        boolean removed = this.connections.remove(connection);
-        this.lock.writeLock().unlock();
-
-        return removed;
+        try {
+            return this.connections.remove(connection);
+        } finally {
+            this.lock.writeLock().unlock();
+        }
     }
 }
