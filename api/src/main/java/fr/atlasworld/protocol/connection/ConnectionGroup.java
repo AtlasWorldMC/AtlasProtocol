@@ -7,7 +7,9 @@ import fr.atlasworld.protocol.packet.Response;
 import fr.atlasworld.registry.RegistryKey;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -53,12 +55,10 @@ public interface ConnectionGroup {
      *
      * @param key key of the packet.
      * @param payload payload to be sent within the packet.
-     * @param response protobuf generated class expected as responses.
-     * @param trustedOnly only send this packet to trusted connections.
      *
      * @return a set of future for every remote the packet was sent to.
      */
-    <P extends Message, R extends Message> Set<CompletableFuture<Response<R>>> sendPacket(@NotNull RegistryKey key, @NotNull P payload, @NotNull Class<R> response);
+    <P extends Message> Set<CompletableFuture<Response>> sendPacket(@NotNull RegistryKey key, @NotNull P payload);
 
     /**
      * Retrieve all connections in this group.
@@ -66,4 +66,15 @@ public interface ConnectionGroup {
      * @return all connections in this group.
      */
     Set<Connection> connections();
+
+    /**
+     * Retrieve a connection using its identifier.
+     *
+     * @param identifier identifier of the connection.
+     *
+     * @return Optional possibly containing the connection,
+     *         if the connection is not present it could that it was never present
+     *         or that the connection has ended.
+     */
+    Optional<Connection> retrieveConnection(@NotNull UUID identifier);
 }

@@ -28,7 +28,7 @@ public class ServerSocketImpl implements ServerSocket {
 
     private final ServerBootstrap bootstrap;
 
-    private final Registry<Packet<?>> registry;
+    private final Registry<Packet> registry;
     private final EventNode<Event> rootNode;
 
     private final ConnectionGroupImpl globalConnectionGroup;
@@ -37,7 +37,7 @@ public class ServerSocketImpl implements ServerSocket {
     private Channel serverChannel;
     private volatile boolean running;
 
-    private ServerSocketImpl(ServerBootstrap bootstrap, EventNode<Event> rootNode, InetSocketAddress bindAddress, KeyPair sessionKeyPair, Registry<Packet<?>> registry) {
+    private ServerSocketImpl(ServerBootstrap bootstrap, EventNode<Event> rootNode, InetSocketAddress bindAddress, KeyPair sessionKeyPair, Registry<Packet> registry) {
         this.address = bindAddress;
         this.sessionKeyPair = sessionKeyPair;
 
@@ -122,5 +122,9 @@ public class ServerSocketImpl implements ServerSocket {
     private void cleanUp() {
         this.bossGroup.shutdownGracefully(0, 100, TimeUnit.MILLISECONDS);
         this.workerGroup.shutdownGracefully(0, 100, TimeUnit.MILLISECONDS);
+    }
+
+    public ConnectionGroupImpl globalConnectionGroup() {
+        return this.globalConnectionGroup;
     }
 }

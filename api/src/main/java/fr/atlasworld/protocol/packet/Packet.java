@@ -6,7 +6,7 @@ import com.google.protobuf.Message;
  * Represents a packet received from remote.
  */
 @FunctionalInterface
-public interface Packet<M extends Message> {
+public interface Packet {
 
     /**
      * Handle a received packet;
@@ -14,5 +14,5 @@ public interface Packet<M extends Message> {
      * @param ctx context for the handling.
      * @param request request received.
      */
-    void handle(PacketHandlerContext ctx, Request<M> request);
+    void handle(PacketHandlerContext ctx, Request request);
 }

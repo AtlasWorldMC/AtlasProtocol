@@ -75,12 +75,11 @@ public interface Connection {
      *
      * @param key key of the packet.
      * @param payload payload to be sent within the packet.
-     * @param response protobuf generated class expected as response.
      *
      * @return future that will contain the response from remote,
      *         or fail if something went wrong during sending or receiving.
      */
-    <P extends Message, R extends Message> CompletableFuture<Response<R>> sendPacket(@NotNull RegistryKey key, @NotNull P payload, @NotNull Class<R> response);
+    <P extends Message> CompletableFuture<Response> sendPacket(@NotNull RegistryKey key, @NotNull P payload);
 
     /**
      * Disconnects this connection.

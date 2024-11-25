@@ -65,7 +65,7 @@ public class ConnectionImpl implements Connection {
     }
 
     @Override
-    public <P extends Message, R extends Message> CompletableFuture<Response<R>> sendPacket(@NotNull RegistryKey key, @NotNull P payload, @NotNull Class<R> response) {
+    public <P extends Message> CompletableFuture<Response> sendPacket(@NotNull RegistryKey key, @NotNull P payload) {
 
     }
 

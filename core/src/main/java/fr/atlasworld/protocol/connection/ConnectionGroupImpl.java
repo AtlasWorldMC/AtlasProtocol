@@ -15,13 +15,13 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 public class ConnectionGroupImpl implements ConnectionGroup {
-    private final Set<ConnectionImpl> connections;
+    private final Map<UUID, ConnectionImpl> connections;
     private final EventNode<ConnectionEvent> node;
 
     private final ReadWriteLock lock;
 
     public ConnectionGroupImpl() {
-        this.connections = new HashSet<>();
+        this.connections = new HashMap<>();
         this.node = EventNode.create("connection-group-" + this.hashCode(), ConnectionEvent.class);
         this.lock = new ReentrantReadWriteLock();
     }
@@ -38,7 +38,7 @@ public class ConnectionGroupImpl implements ConnectionGroup {
 
         this.lock.readLock().lock();
         try {
-            for (Connection connection : this.connections) {
+            for (Connection connection : this.connections.values()) {
                 if (!connection.connected() || connection.ping() == -1)
                     continue;
 
@@ -59,7 +59,7 @@ public class ConnectionGroupImpl implements ConnectionGroup {
 
         this.lock.readLock().lock();
         try {
-            futures = this.connections.stream()
+            futures = this.connections.values().stream()
                     .filter(ConnectionImpl::connected)
                     .map(connection -> connection.disconnect(force))
                     .toArray(CompletableFuture[]::new);
@@ -74,16 +74,15 @@ public class ConnectionGroupImpl implements ConnectionGroup {
     }
 
     @Override
-    public <P extends Message, R extends Message> Set<CompletableFuture<Response<R>>> sendPacket(@NotNull RegistryKey key, @NotNull P payload, @NotNull Class<R> response) {
+    public <P extends Message> Set<CompletableFuture<Response>> sendPacket(@NotNull RegistryKey key, @NotNull P payload) {
         Preconditions.checkNotNull(key);
         Preconditions.checkNotNull(payload);
-        Preconditions.checkNotNull(response);
 
         this.lock.readLock().lock();
         try {
-            return this.connections.stream()
+            return this.connections.values().stream()
                     .filter(ConnectionImpl::connected)
-                    .map(connection -> connection.sendPacket(key, payload, response))
+                    .map(connection -> connection.sendPacket(key, payload))
                     .collect(Collectors.toUnmodifiableSet());
         } finally {
             this.lock.readLock().unlock();
@@ -100,19 +99,31 @@ public class ConnectionGroupImpl implements ConnectionGroup {
         }
     }
 
+    @Override
+    public Optional<Connection> retrieveConnection(@NotNull UUID identifier) {
+        this.lock.readLock().lock();
+        try {
+            return Optional.ofNullable(this.connections.get(identifier));
+        } finally {
+            this.lock.readLock().unlock();
+        }
+    }
+
     public void registerConnection(@NotNull ConnectionImpl connection) {
         Preconditions.checkNotNull(connection);
         Preconditions.checkArgument(connection.connected(), "Connection is no longer connected!");
 
         this.lock.writeLock().lock();
         try {
-            if (this.connections.contains(connection))
+            if (this.connections.containsKey(connection.identifier()))
                 throw new IllegalArgumentException("Connection already present!");
 
-            this.connections.add(connection);
+            this.connections.put(connection.identifier(), connection);
         } finally {
             this.lock.writeLock().unlock();
         }
+
+        connection.eventNode().addChildNode(this.node);
     }
 
     public boolean unregisterConnection(@NotNull ConnectionImpl connection) {
@@ -120,7 +131,12 @@ public class ConnectionGroupImpl implements ConnectionGroup {
 
         this.lock.writeLock().lock();
         try {
-            return this.connections.remove(connection);
+            if (this.connections.remove(connection.identifier()) != null) {
+                connection.eventNode().removeChildNode(this.node.name());
+                return true;
+            }
+
+            return false;
         } finally {
             this.lock.writeLock().unlock();
         }

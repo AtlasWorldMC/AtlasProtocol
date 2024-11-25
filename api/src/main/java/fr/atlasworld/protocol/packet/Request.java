@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
  *
  * @param <M> message type of payload.
  */
-public interface Request<M extends Message> extends GenericPacket<M> {
+public interface Request extends GenericPacket {
 
     /**
      * Retrieve the header attached to the header.

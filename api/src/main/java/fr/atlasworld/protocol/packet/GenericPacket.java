@@ -1,5 +1,6 @@
 package fr.atlasworld.protocol.packet;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import fr.atlasworld.protocol.connection.Connection;
 import fr.atlasworld.protocol.packet.header.Header;
@@ -10,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
  *
  * @param <M> message type.
  */
-public interface GenericPacket<M extends Message> {
+public interface GenericPacket {
 
     /**
      * Retrieve the header of the packet.
@@ -21,18 +22,21 @@ public interface GenericPacket<M extends Message> {
     Header header();
 
     /**
-     * Retrieve the payload of the packet.
-     *
-     * @return the payload.
-     */
-    @NotNull
-    M payload();
-
-    /**
      * Retrieve the source of the packet.
      *
      * @return source of the packet.
      */
     @NotNull
     Connection source();
+
+    /**
+     * Retrieve the payload as a specific ProtoBuf message.
+     *
+     * @param messageType message type.
+     *
+     * @return parsed payload into the message.
+     * @throws com.google.protobuf.InvalidProtocolBufferException if the buffer cannot be parsed into the message.
+     */
+    @NotNull
+    <M extends Message> M payload(Class<M> messageType) throws InvalidProtocolBufferException;
 }

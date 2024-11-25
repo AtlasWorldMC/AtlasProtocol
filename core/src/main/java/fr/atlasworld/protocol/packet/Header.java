@@ -1,6 +1,7 @@
 package fr.atlasworld.protocol.packet;
 
 import com.google.common.base.Preconditions;
+import fr.atlasworld.protocol.exception.request.UnknownRequestException;
 import fr.atlasworld.protocol.generated.HeaderWrapper;
 import fr.atlasworld.protocol.packet.header.RequestHeader;
 import fr.atlasworld.protocol.packet.header.ResponseHeader;
@@ -9,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
 
-public class Header implements ResponseHeader, RequestHeader {
+public class Header implements fr.atlasworld.protocol.packet.header.Header, ResponseHeader, RequestHeader {
     private final HeaderWrapper.Header header;
     private final boolean responseHeader;
 
@@ -38,8 +39,7 @@ public class Header implements ResponseHeader, RequestHeader {
 
     @Override
     public boolean successResponse() {
-        // TODO: Define Codes
-        return false;
+        return this.responseCode() >= 100 && this.responseCode() < 200;
     }
 
     @Override
@@ -53,11 +53,12 @@ public class Header implements ResponseHeader, RequestHeader {
     }
 
     @Override
-    public @NotNull RegistryKey request() {
+    public @NotNull RegistryKey request() throws UnknownRequestException {
         if (this.responseHeader)
             throw new UnsupportedOperationException("Only requests headers contains this field!");
 
-        return RegistryKey.fromString(this.header.getRequest()).orElseThrow();
+        return RegistryKey.fromString(this.header.getRequest()).orElseThrow(() ->
+                new UnknownRequestException("Unknown request: " + this.header.getRequest()));
     }
 
     public boolean isResponseHeader() {

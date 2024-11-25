@@ -1,5 +1,6 @@
 package fr.atlasworld.protocol.packet.header;
 
+import fr.atlasworld.protocol.exception.request.UnknownRequestException;
 import fr.atlasworld.registry.RegistryKey;
 import org.jetbrains.annotations.NotNull;
 
@@ -19,7 +20,9 @@ public interface RequestHeader extends Header {
      * Retrieve the request key.
      *
      * @return request key.
+     *
+     * @throws UnknownRequestException if the request key could not be parsed.
      */
     @NotNull
-    RegistryKey request();
+    RegistryKey request() throws UnknownRequestException;
 }
