@@ -1,5 +1,6 @@
 package fr.atlasworld.protocol.packet;
 
+import com.google.common.base.Preconditions;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import fr.atlasworld.protocol.connection.Connection;
@@ -52,6 +53,12 @@ public class PacketBase implements GenericPacket, Response, Request {
             throw new IllegalArgumentException("Unexpected exception received from parse " +
                     messageType.getSimpleName() + " #parseFrom(byte[] data) method!", cause);
         }
+    }
+
+    public PacketHandlerContextImpl createHandlingContext() {
+        Preconditions.checkArgument(this.header.isRequestHeader(), "Only request can be handled!");
+
+        return new PacketHandlerContextImpl(this.source, this.source.socket());
     }
 
     private Method determineMethod(Class<? extends Message> type) throws NoSuchMethodException {

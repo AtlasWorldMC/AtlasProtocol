@@ -1,10 +1,12 @@
 package fr.atlasworld.protocol.handler;
 
+import fr.atlasworld.protocol.exception.NetworkException;
 import fr.atlasworld.protocol.exception.request.NetworkRequestException;
 import fr.atlasworld.protocol.exception.request.UnknownRequestException;
 import fr.atlasworld.protocol.exception.response.NetworkResponseException;
 import fr.atlasworld.protocol.packet.Packet;
 import fr.atlasworld.protocol.packet.PacketBase;
+import fr.atlasworld.protocol.packet.PacketHandlerContextImpl;
 import fr.atlasworld.registry.Registry;
 import fr.atlasworld.registry.RegistryKey;
 import io.netty.channel.ChannelHandlerContext;
@@ -38,12 +40,16 @@ public class ExecutorHandler extends ChannelInboundHandlerAdapter {
         this.handleResponse(packet);
     }
 
-    private void handleRequest(PacketBase request) throws NetworkRequestException {
+    private void handleRequest(PacketBase request) throws NetworkException {
         RegistryKey key = request.header().request();
         Packet packet = this.registry.retrieveValue(key)
                 .orElseThrow(() -> new UnknownRequestException("Unknown request: " + key));
 
-        packet.handle();
+        PacketHandlerContextImpl context = request.createHandlingContext();
+
+        try {
+            packet.handle(context, request);
+        }
     }
 
     private void handleResponse(PacketBase response) throws NetworkResponseException {

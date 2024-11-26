@@ -49,7 +49,7 @@ public interface ClientSocket extends Socket, Connection {
          * @param registry registry containing the packets.
          */
         @RequiredBuilderArgument
-        Builder registry(@NotNull Registry<Packet<?>> registry);
+        Builder registry(@NotNull Registry<Packet> registry);
 
         /**
          * Sets the client authentication parameters required to authenticate to the server.

@@ -3,9 +3,12 @@ package fr.atlasworld.protocol.connection;
 import com.google.protobuf.Message;
 import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.protocol.event.ConnectionEvent;
+import fr.atlasworld.protocol.packet.ResponderImpl;
 import fr.atlasworld.protocol.packet.Response;
+import fr.atlasworld.protocol.socket.Socket;
 import fr.atlasworld.registry.RegistryKey;
 import io.netty.channel.Channel;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.InetSocketAddress;
@@ -21,15 +24,18 @@ public class ConnectionImpl implements Connection {
     private final UUID identifier;
     private final PublicKey key;
 
-    private final AtomicInteger ping;
+    private final Socket socket;
+
+    private volatile int ping;
     private final EventNode<ConnectionEvent> node;
 
-    public ConnectionImpl(Channel channel, UUID identifier, PublicKey key) {
+    public ConnectionImpl(Channel channel, UUID identifier, PublicKey key, Socket socket) {
         this.channel = channel;
         this.identifier = identifier;
         this.key = key;
+        this.socket = socket;
 
-        this.ping = new AtomicInteger(-1);
+        this.ping = -1;
         this.node = EventNode.create(String.format(NODE_NAME, channel.remoteAddress(), channel.hashCode()),
                 ConnectionEvent.class, event -> event.connection().equals(this));
     }
@@ -51,7 +57,7 @@ public class ConnectionImpl implements Connection {
 
     @Override
     public int ping() {
-        return this.ping.get();
+        return this.ping;
     }
 
     @Override
@@ -65,12 +71,40 @@ public class ConnectionImpl implements Connection {
     }
 
     @Override
-    public <P extends Message> CompletableFuture<Response> sendPacket(@NotNull RegistryKey key, @NotNull P payload) {
+    public <P extends Message> @NotNull CompletableFuture<Response> sendPacket(@NotNull RegistryKey key, @NotNull P payload) {
+        if (!this.channel.isActive())
+            throw new IllegalStateException("Connection Disconnected!");
+
 
     }
 
     @Override
-    public CompletableFuture<Void> disconnect(boolean force) {
+    public @NotNull CompletableFuture<Void> disconnect(boolean force) {
+        if (!this.channel.isActive())
+            throw new IllegalStateException("Connection Disconnected!");
 
+
+    }
+
+    @Override
+    public @NotNull Socket socket() {
+        return this.socket;
+    }
+
+    @ApiStatus.Internal
+    public Channel channel() {
+        return this.channel;
+    }
+
+    public ResponderImpl createResponder() {
+        return new ResponderImpl(this.channel);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof ConnectionImpl other))
+            return false;
+
+        return this.channel.equals(other.channel);
     }
 }

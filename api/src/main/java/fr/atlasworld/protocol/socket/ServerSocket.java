@@ -2,8 +2,10 @@ package fr.atlasworld.protocol.socket;
 
 import fr.atlasworld.common.annotation.OptionalBuilderArgument;
 import fr.atlasworld.common.annotation.RequiredBuilderArgument;
+import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.protocol.AtlasProtocol;
 import fr.atlasworld.protocol.connection.ConnectionGroup;
+import fr.atlasworld.protocol.event.ConnectionEvent;
 import fr.atlasworld.protocol.packet.Packet;
 import fr.atlasworld.protocol.security.Authenticator;
 import fr.atlasworld.protocol.security.HandshakeHandler;
@@ -36,6 +38,13 @@ public interface ServerSocket extends Socket {
      */
     @NotNull
     KeyPair sessionKeyPair();
+
+    /**
+     * Retrieve the event node of the socket.
+     *
+     * @return event node of the socket.
+     */
+    EventNode<ConnectionEvent> eventNode();
 
     /**
      * Builder to create a new {@link ServerSocket}.

@@ -4,6 +4,7 @@ import com.google.protobuf.Message;
 import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.protocol.event.ConnectionEvent;
 import fr.atlasworld.protocol.packet.Response;
+import fr.atlasworld.protocol.socket.Socket;
 import fr.atlasworld.registry.RegistryKey;
 import org.jetbrains.annotations.NotNull;
 
@@ -79,6 +80,7 @@ public interface Connection {
      * @return future that will contain the response from remote,
      *         or fail if something went wrong during sending or receiving.
      */
+    @NotNull
     <P extends Message> CompletableFuture<Response> sendPacket(@NotNull RegistryKey key, @NotNull P payload);
 
     /**
@@ -89,5 +91,14 @@ public interface Connection {
      *
      * @return future that will be completed when the connection has been terminated.
      */
+    @NotNull
     CompletableFuture<Void> disconnect(boolean force);
+
+    /**
+     * Retrieve the socket of the connection.
+     *
+     * @return socket of the connection.
+     */
+    @NotNull
+    Socket socket();
 }

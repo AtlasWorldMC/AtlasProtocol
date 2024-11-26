@@ -1,6 +1,8 @@
 package fr.atlasworld.protocol.packet;
 
 import com.google.protobuf.Message;
+import fr.atlasworld.protocol.exception.NetworkException;
+import fr.atlasworld.protocol.exception.request.NetworkRequestException;
 
 /**
  * Represents a packet received from remote.
@@ -13,6 +15,8 @@ public interface Packet {
      *
      * @param ctx context for the handling.
      * @param request request received.
+     *
+     * @throws NetworkException exception thrown if the handling of the request fails.
      */
-    void handle(PacketHandlerContext ctx, Request request);
+    void handle(PacketHandlerContext ctx, Request request) throws NetworkException;
 }
