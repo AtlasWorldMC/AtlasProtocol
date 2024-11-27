@@ -3,6 +3,7 @@ package fr.atlasworld.protocol.handler;
 import fr.atlasworld.protocol.exception.NetworkException;
 import fr.atlasworld.protocol.exception.request.NetworkRequestException;
 import fr.atlasworld.protocol.exception.request.UnknownRequestException;
+import fr.atlasworld.protocol.exception.response.FailureNetworkException;
 import fr.atlasworld.protocol.exception.response.NetworkResponseException;
 import fr.atlasworld.protocol.packet.Packet;
 import fr.atlasworld.protocol.packet.PacketBase;
@@ -43,12 +44,17 @@ public class ExecutorHandler extends ChannelInboundHandlerAdapter {
     private void handleRequest(PacketBase request) throws NetworkException {
         RegistryKey key = request.header().request();
         Packet packet = this.registry.retrieveValue(key)
-                .orElseThrow(() -> new UnknownRequestException("Unknown request: " + key));
+                .orElseThrow(() -> new UnknownRequestException("Unknown request: " + key, request.header().uniqueId()));
 
         PacketHandlerContextImpl context = request.createHandlingContext();
 
         try {
             packet.handle(context, request);
+        } catch (Throwable cause) {
+            if (cause instanceof NetworkException)
+                throw cause;
+
+            throw new FailureNetworkException("Request Handling Failed", cause, request.header().uniqueId());
         }
     }
 

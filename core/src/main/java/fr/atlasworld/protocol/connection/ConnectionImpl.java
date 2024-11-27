@@ -15,10 +15,13 @@ import java.net.InetSocketAddress;
 import java.security.PublicKey;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ConnectionImpl implements Connection {
     private static final String NODE_NAME = "connection-%s-%s";
+
+    private final ConcurrentHashMap<UUID, >
 
     private final Channel channel;
     private final UUID identifier;

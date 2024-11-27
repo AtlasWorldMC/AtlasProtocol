@@ -46,7 +46,8 @@ public class CodecHandler extends ChannelDuplexHandler {
 
         byte[] header = packet.header().toByteArray();
         if (header.length > MAX_HEADER_SIZE)
-            throw new PacketToBigException("Header exceeds maximum header size (" + MAX_HEADER_SIZE + "): " + header.length);
+            throw new PacketToBigException("Header exceeds maximum header size (" + MAX_HEADER_SIZE + "): " + header.length,
+                    NetworkException.UNDEFINED_COMMUNICATION_IDENTIFIER);
 
         byte[] payload = packet.message().toByteArray();
         ByteBuf buffer = ctx.channel().alloc().directBuffer();
@@ -73,12 +74,14 @@ public class CodecHandler extends ChannelDuplexHandler {
         short headerSize = buffer.readShort();
         if (headerSize > MAX_HEADER_SIZE) {
             buffer.release();
-            throw new PacketToBigException("Header exceeds maximum header size (" + MAX_HEADER_SIZE + " bytes): " + headerSize);
+            throw new PacketToBigException("Header exceeds maximum header size (" + MAX_HEADER_SIZE + " bytes): " + headerSize,
+                    NetworkException.UNDEFINED_COMMUNICATION_IDENTIFIER);
         }
 
         if (headerSize < 0) { // Packet is invalid or with an unexpected offset.
             buffer.release();
-            throw new PacketInvalidException("Header size is invalid!");
+            throw new PacketInvalidException("Header size is invalid!",
+                    NetworkException.UNDEFINED_COMMUNICATION_IDENTIFIER);
         }
 
         byte[] headerBytes = new byte[headerSize];
@@ -93,27 +96,29 @@ public class CodecHandler extends ChannelDuplexHandler {
         try {
             header = HeaderWrapper.Header.parseFrom(headerBytes);
         } catch (InvalidProtocolBufferException e) {
-            throw new PacketInvalidException("Header is not valid!", e);
+            throw new PacketInvalidException("Header is not valid!", e,
+                    NetworkException.UNDEFINED_COMMUNICATION_IDENTIFIER);
         }
 
         boolean response = header.hasCode();
         if (response && header.hasRequest())
-            throw new PacketInvalidException("Header has a response code but also a request entry!");
+            throw new PacketInvalidException("Header has a response code but also a request entry!",
+                    new UUID(header.getIdMostSig(), header.getIdLeastSig()));
 
-        Connection connection = this.connection(ctx.channel());
+        Connection connection = this.connection(ctx.channel(), new UUID(header.getIdMostSig(), header.getIdLeastSig()));
 
         PacketBase packet = new PacketBase(new Header(header, header.hasCode()), connection, payloadBytes);
         ctx.fireChannelRead(packet);
     }
 
-    private Connection connection(Channel channel) throws NetworkException {
+    private Connection connection(Channel channel, UUID communicationIdentifier) throws NetworkException {
         UUID identifier = channel.attr(ApiBridge.UNIQUE_ID_ATTRIBUTE).get();
         if (identifier == null)
-            throw new NetworkDeSyncException("Missing identifier attribute!");
+            throw new NetworkDeSyncException("Missing identifier attribute!", communicationIdentifier);
 
         if (this.socket instanceof ServerSocketImpl serverSocket)
             return serverSocket.globalConnectionGroup().retrieveConnection(identifier)
-                    .orElseThrow(() -> new NetworkDeSyncException("Missing or disconnected connection!"));
+                    .orElseThrow(() -> new NetworkDeSyncException("Missing or disconnected connection!", communicationIdentifier));
 
         return (ClientSocket) this.socket;
     }

@@ -1,24 +1,26 @@
 package fr.atlasworld.protocol.exception.request;
 
+import java.util.UUID;
+
 /**
  * Thrown when a received is unauthorized.
  */
 public class UnauthorizedRequestException extends NetworkRequestException {
     public static final int CODE = 201;
 
-    public UnauthorizedRequestException() {
-        super(CODE);
+    public UnauthorizedRequestException(UUID communicationIdentifier) {
+        super(CODE, communicationIdentifier);
     }
 
-    public UnauthorizedRequestException(String message) {
-        super(message, CODE);
+    public UnauthorizedRequestException(String message, UUID communicationIdentifier) {
+        super(message, CODE, communicationIdentifier);
     }
 
-    public UnauthorizedRequestException(String message, Throwable cause) {
-        super(message, cause, CODE);
+    public UnauthorizedRequestException(String message, Throwable cause, UUID communicationIdentifier) {
+        super(message, cause, CODE, communicationIdentifier);
     }
 
-    public UnauthorizedRequestException(Throwable cause) {
-        super(cause, CODE);
+    public UnauthorizedRequestException(Throwable cause, UUID communicationIdentifier) {
+        super(cause, CODE, communicationIdentifier);
     }
 }
