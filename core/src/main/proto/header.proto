@@ -8,7 +8,7 @@ message Header {
   fixed64 id_most_sig = 2;
   fixed64 id_least_sig = 3;
 
-  optional string request = 4;
-  optional sint32 code = 5;
-  optional uint64 timeout = 6;
+  optional string request = 5;
+  optional sint32 code = 6;
+  optional uint64 timeout = 7;
 }

@@ -10,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.net.InetSocketAddress;
 import java.security.PublicKey;
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -61,6 +62,7 @@ public interface Connection {
      *
      * @return true if the connection is connected, false otherwise.
      */
+
     boolean connected();
 
     /**
@@ -93,6 +95,25 @@ public interface Connection {
      */
     @NotNull
     CompletableFuture<Void> disconnect(boolean force);
+
+    /**
+     * Current set timeout for the connection.
+     *
+     * @return current timeout for the connection.
+     */
+    @NotNull
+    Duration timeout();
+
+    /**
+     * Set a new timeout for the connection.
+     * <p>
+     * <b>Warning:</b> Already sent requests will not get their timeout changed!
+     *
+     * @param timeout new timeout of the connection.
+     *
+     * @throws IllegalArgumentException if the {@code timeout} is negative.
+     */
+    void timeout(@NotNull Duration timeout);
 
     /**
      * Retrieve the socket of the connection.

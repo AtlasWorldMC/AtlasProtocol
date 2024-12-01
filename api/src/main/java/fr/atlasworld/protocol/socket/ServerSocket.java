@@ -40,13 +40,6 @@ public interface ServerSocket extends Socket {
     KeyPair sessionKeyPair();
 
     /**
-     * Retrieve the event node of the socket.
-     *
-     * @return event node of the socket.
-     */
-    EventNode<ConnectionEvent> eventNode();
-
-    /**
      * Builder to create a new {@link ServerSocket}.
      */
     interface Builder {

@@ -33,13 +33,15 @@ public class ServerSocketImpl implements ServerSocket {
     private final EventNode<Event> rootNode;
     private final EventNode<ConnectionEvent> node;
 
+    private final long defaultTimeout;
     private final ConnectionGroupImpl globalConnectionGroup;
 
     private EventLoopGroup bossGroup, workerGroup;
     private Channel serverChannel;
     private volatile boolean running;
 
-    private ServerSocketImpl(ServerBootstrap bootstrap, EventNode<Event> rootNode, InetSocketAddress bindAddress, KeyPair sessionKeyPair, Registry<Packet> registry) {
+    private ServerSocketImpl(ServerBootstrap bootstrap, EventNode<Event> rootNode, InetSocketAddress bindAddress,
+                             KeyPair sessionKeyPair, Registry<Packet> registry, long defaultTimeout) {
         this.address = bindAddress;
         this.sessionKeyPair = sessionKeyPair;
 
@@ -48,6 +50,7 @@ public class ServerSocketImpl implements ServerSocket {
         this.node = this.rootNode.createChildNode("server-socket-" + this.hashCode(), ConnectionEvent.class,
                 event -> event.connection().socket() == this);
 
+        this.defaultTimeout = defaultTimeout;
         this.globalConnectionGroup = new ConnectionGroupImpl();
 
         this.bootstrap = bootstrap;
@@ -133,6 +136,14 @@ public class ServerSocketImpl implements ServerSocket {
     private void cleanUp() {
         this.bossGroup.shutdownGracefully(0, 100, TimeUnit.MILLISECONDS);
         this.workerGroup.shutdownGracefully(0, 100, TimeUnit.MILLISECONDS);
+    }
+
+    public long defaultTimeout() {
+        return this.defaultTimeout;
+    }
+
+    public Registry<Packet> registry() {
+        return this.registry;
     }
 
     public ConnectionGroupImpl globalConnectionGroup() {

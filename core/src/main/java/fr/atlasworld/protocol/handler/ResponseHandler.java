@@ -13,6 +13,15 @@ public class ResponseHandler {
     private final UUID identifier;
 
     private volatile boolean acknowledged;
+    private volatile boolean completed;
+
+    public UUID identifier() {
+        return this.identifier;
+    }
+
+    public boolean acknowledged() {
+        return this.acknowledged;
+    }
 
     public ResponseHandler(@NotNull CompletableFuture<Response> future, @NotNull UUID identifier) {
         Preconditions.checkNotNull(future);
@@ -22,6 +31,7 @@ public class ResponseHandler {
         this.identifier = identifier;
 
         this.acknowledged = false;
+        this.completed = false;
     }
 
     /**
@@ -30,7 +40,7 @@ public class ResponseHandler {
      * @return true if the handler should be removed from waiting list.
      */
     public boolean timeout() {
-        if (this.acknowledged)
+        if (this.acknowledged || this.completed)
             return false; // If the request has been acknowledged we do not remove the handler yet.
 
         if (!this.future.isDone())
@@ -39,20 +49,35 @@ public class ResponseHandler {
         return true;
     }
 
-    public void acknowledgeRe
+    public void acknowledge() {
+        if (this.acknowledged)
+            throw new IllegalStateException("Response has already been acknowledged!");
+
+        if (this.completed)
+            return;
+
+        this.acknowledged = true;
+    }
 
     /**
      * Times out acknowledgement.
-     *
-     * @return true if the handler should be removed from the waiting list.
      */
-    public boolean timeoutAcknowledgement() {
+    public void timeoutAcknowledgement() {
         if (!this.acknowledged)
             throw new IllegalArgumentException("The request was never acknowledged!");
 
         if (!this.future.isDone())
             this.future.completeExceptionally(new TimeoutException("Awaiting acknowledged response timed-out."));
 
-        return true;
+    }
+
+    public void respond(Response response) {
+        if (this.completed)
+            throw new IllegalStateException("Handler was already responded to!");
+
+        this.completed = true;
+
+        if (!this.future.isDone())
+            this.future.complete(response);
     }
 }

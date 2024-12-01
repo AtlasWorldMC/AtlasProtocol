@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+option java_package = "fr.atlasworld.protocol.generated";
+option java_outer_classname = "AcknowledgementWrapper";
+
+message Acknowledge {
+  uint64 timeout = 1;
+}

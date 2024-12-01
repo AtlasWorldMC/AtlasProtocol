@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+option java_package = "fr.atlasworld.protocol.generated";
+option java_outer_classname = "EmptyWrapper";
+
+message Empty {
+}

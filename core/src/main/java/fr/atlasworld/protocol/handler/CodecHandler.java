@@ -3,6 +3,7 @@ package fr.atlasworld.protocol.handler;
 import com.google.protobuf.InvalidProtocolBufferException;
 import fr.atlasworld.protocol.ApiBridge;
 import fr.atlasworld.protocol.connection.Connection;
+import fr.atlasworld.protocol.connection.ConnectionImpl;
 import fr.atlasworld.protocol.exception.NetworkException;
 import fr.atlasworld.protocol.exception.request.NetworkDeSyncException;
 import fr.atlasworld.protocol.exception.request.PacketToBigException;
@@ -11,6 +12,7 @@ import fr.atlasworld.protocol.generated.HeaderWrapper;
 import fr.atlasworld.protocol.packet.Header;
 import fr.atlasworld.protocol.packet.PacketBase;
 import fr.atlasworld.protocol.socket.ClientSocket;
+import fr.atlasworld.protocol.socket.ClientSocketImpl;
 import fr.atlasworld.protocol.socket.ServerSocketImpl;
 import fr.atlasworld.protocol.socket.Socket;
 import io.netty.buffer.ByteBuf;
@@ -105,21 +107,21 @@ public class CodecHandler extends ChannelDuplexHandler {
             throw new PacketInvalidException("Header has a response code but also a request entry!",
                     new UUID(header.getIdMostSig(), header.getIdLeastSig()));
 
-        Connection connection = this.connection(ctx.channel(), new UUID(header.getIdMostSig(), header.getIdLeastSig()));
+        ConnectionImpl connection = this.connection(ctx.channel(), new UUID(header.getIdMostSig(), header.getIdLeastSig()));
 
         PacketBase packet = new PacketBase(new Header(header, header.hasCode()), connection, payloadBytes);
         ctx.fireChannelRead(packet);
     }
 
-    private Connection connection(Channel channel, UUID communicationIdentifier) throws NetworkException {
+    private ConnectionImpl connection(Channel channel, UUID communicationIdentifier) throws NetworkException {
         UUID identifier = channel.attr(ApiBridge.UNIQUE_ID_ATTRIBUTE).get();
         if (identifier == null)
             throw new NetworkDeSyncException("Missing identifier attribute!", communicationIdentifier);
 
         if (this.socket instanceof ServerSocketImpl serverSocket)
-            return serverSocket.globalConnectionGroup().retrieveConnection(identifier)
+            return (ConnectionImpl) serverSocket.globalConnectionGroup().retrieveConnection(identifier)
                     .orElseThrow(() -> new NetworkDeSyncException("Missing or disconnected connection!", communicationIdentifier));
 
-        return (ClientSocket) this.socket;
+        return ((ClientSocketImpl) this.socket).connection();
     }
 }

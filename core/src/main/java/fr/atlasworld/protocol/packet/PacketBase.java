@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import fr.atlasworld.protocol.connection.Connection;
+import fr.atlasworld.protocol.connection.ConnectionImpl;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.ref.WeakReference;
@@ -18,10 +19,10 @@ public class PacketBase implements GenericPacket, Response, Request {
             new ConcurrentHashMap<>();
 
     private final Header header;
-    private final Connection source;
+    private final ConnectionImpl source;
     private final byte[] payload;
 
-    public PacketBase(Header header, Connection source, byte[] payload) {
+    public PacketBase(Header header, ConnectionImpl source, byte[] payload) {
         this.header = header;
         this.source = source;
         this.payload = payload;
@@ -33,7 +34,7 @@ public class PacketBase implements GenericPacket, Response, Request {
     }
 
     @Override
-    public @NotNull Connection source() {
+    public @NotNull ConnectionImpl source() {
         return this.source;
     }
 
@@ -58,7 +59,7 @@ public class PacketBase implements GenericPacket, Response, Request {
     public PacketHandlerContextImpl createHandlingContext() {
         Preconditions.checkArgument(this.header.isRequestHeader(), "Only request can be handled!");
 
-        return new PacketHandlerContextImpl(this.source, this.source.socket());
+        return new PacketHandlerContextImpl(this.source, this.source.socket(), this.header.uniqueId());
     }
 
     private Method determineMethod(Class<? extends Message> type) throws NoSuchMethodException {

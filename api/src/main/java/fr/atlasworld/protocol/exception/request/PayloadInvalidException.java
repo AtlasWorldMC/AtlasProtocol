@@ -22,7 +22,7 @@ public class PayloadInvalidException extends NetworkRequestException {
         super(message, cause, CODE, communicationIdentifier);
     }
 
-    public PayloadInvalidException(InvalidProtocolBufferException cause, UUID communicationIdentifier) {
+    public PayloadInvalidException(UUID communicationIdentifier, InvalidProtocolBufferException cause) {
         super(cause, CODE, communicationIdentifier);
     }
 }

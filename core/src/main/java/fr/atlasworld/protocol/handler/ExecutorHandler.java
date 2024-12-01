@@ -1,18 +1,25 @@
 package fr.atlasworld.protocol.handler;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import fr.atlasworld.protocol.connection.ConnectionImpl;
 import fr.atlasworld.protocol.exception.NetworkException;
-import fr.atlasworld.protocol.exception.request.NetworkRequestException;
+import fr.atlasworld.protocol.exception.request.PayloadInvalidException;
 import fr.atlasworld.protocol.exception.request.UnknownRequestException;
 import fr.atlasworld.protocol.exception.response.FailureNetworkException;
 import fr.atlasworld.protocol.exception.response.NetworkResponseException;
+import fr.atlasworld.protocol.generated.AcknowledgementWrapper;
 import fr.atlasworld.protocol.packet.Packet;
 import fr.atlasworld.protocol.packet.PacketBase;
 import fr.atlasworld.protocol.packet.PacketHandlerContextImpl;
+import fr.atlasworld.protocol.packet.ResponderImpl;
 import fr.atlasworld.registry.Registry;
 import fr.atlasworld.registry.RegistryKey;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
+
+import java.time.temporal.ChronoUnit;
+import java.util.UUID;
 
 public class ExecutorHandler extends ChannelInboundHandlerAdapter {
     private final Registry<Packet> registry;
@@ -59,6 +66,24 @@ public class ExecutorHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void handleResponse(PacketBase response) throws NetworkResponseException {
+        if (response.header().responseCode() == 0) {
+            this.handleAck(response);
+            return;
+        }
 
+
+    }
+
+    private void handleAck(PacketBase ack) {
+        UUID identifier = ack.header().uniqueId();
+        long timeout;
+
+        try {
+            timeout = ack.payload(AcknowledgementWrapper.Acknowledge.class).getTimeout();
+        } catch (InvalidProtocolBufferException e) {
+            timeout = ResponderImpl.DEFAULT_ACK_TIMEOUT.get(ChronoUnit.MILLIS);
+        }
+
+        ack.source().acknowledgeRequest(identifier, timeout);
     }
 }

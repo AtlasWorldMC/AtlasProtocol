@@ -1,7 +1,9 @@
 package fr.atlasworld.protocol.socket;
 
+import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.protocol.Side;
 import fr.atlasworld.protocol.connection.Connection;
+import fr.atlasworld.protocol.event.ConnectionEvent;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
@@ -10,6 +12,13 @@ import java.util.concurrent.CompletableFuture;
  * Generic Socket Interface, implements the base sockets functions.
  */
 public interface Socket {
+
+    /**
+     * Retrieve the event node of the socket.
+     *
+     * @return event node of the socket.
+     */
+    EventNode<ConnectionEvent> eventNode();
 
     /**
      * Checks whether the socket is running.

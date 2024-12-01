@@ -7,18 +7,20 @@ import fr.atlasworld.protocol.socket.ClientSocketImpl;
 import fr.atlasworld.protocol.socket.Socket;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.UUID;
+
 public class PacketHandlerContextImpl implements PacketHandlerContext {
     private final Connection connection;
     private final ResponderImpl responder;
     private final Socket socket;
 
-    public PacketHandlerContextImpl(Connection connection, Socket socket) {
+    public PacketHandlerContextImpl(Connection connection, Socket socket, UUID packetIdentifier) {
         this.connection = connection;
         this.socket = socket;
 
         this.responder = connection instanceof ConnectionImpl ?
-                ((ConnectionImpl) connection).createResponder() :
-                ((ClientSocketImpl) connection).connection().createResponder();
+                ((ConnectionImpl) connection).createResponder(packetIdentifier) :
+                ((ClientSocketImpl) connection).connection().createResponder(packetIdentifier);
     }
 
     @Override

@@ -1,5 +1,7 @@
 package fr.atlasworld.protocol;
 
+import fr.atlasworld.registry.Registry;
+import fr.atlasworld.registry.RegistryKey;
 import io.netty.channel.ChannelFuture;
 import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
@@ -11,6 +13,8 @@ import java.util.concurrent.CompletableFuture;
 
 public class ApiBridge implements fr.atlasworld.protocol.internal.ApiBridge {
     public static final Logger LOGGER = LoggerFactory.getLogger(AtlasProtocol.class);
+
+    public static final RegistryKey DISCONNECT_PACKET = new RegistryKey("system", "disconnect");
 
     public static final AttributeKey<UUID> UNIQUE_ID_ATTRIBUTE = AttributeKey.newInstance("id");
 
