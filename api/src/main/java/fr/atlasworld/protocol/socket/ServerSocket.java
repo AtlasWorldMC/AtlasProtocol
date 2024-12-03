@@ -2,10 +2,8 @@ package fr.atlasworld.protocol.socket;
 
 import fr.atlasworld.common.annotation.OptionalBuilderArgument;
 import fr.atlasworld.common.annotation.RequiredBuilderArgument;
-import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.protocol.AtlasProtocol;
 import fr.atlasworld.protocol.connection.ConnectionGroup;
-import fr.atlasworld.protocol.event.ConnectionEvent;
 import fr.atlasworld.protocol.packet.Packet;
 import fr.atlasworld.protocol.security.Authenticator;
 import fr.atlasworld.protocol.security.HandshakeHandler;
@@ -24,9 +22,9 @@ public interface ServerSocket extends Socket {
     /**
      * Retrieve all currently connected connections.
      * <p>
-     * This does not include not yet trusted connections.
+     * This does not include not yet validated connections.
      *
-     * @return all currently connected and trusted connections.
+     * @return all currently connected and validated connections.
      */
     @NotNull
     ConnectionGroup connections();
@@ -85,7 +83,7 @@ public interface ServerSocket extends Socket {
          * @param registry registry containing the packets.
          */
         @RequiredBuilderArgument
-        Builder registry(@NotNull Registry<Packet<?>> registry);
+        Builder registry(@NotNull Registry<Packet> registry);
 
         /**
          * Adds a property to the handshake properties.

@@ -5,7 +5,9 @@ import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.protocol.ApiBridge;
 import fr.atlasworld.protocol.Side;
 import fr.atlasworld.protocol.connection.ConnectionGroupImpl;
-import fr.atlasworld.protocol.event.ConnectionEvent;
+import fr.atlasworld.protocol.event.NetworkEvent;
+import fr.atlasworld.protocol.event.socket.SocketClosedEvent;
+import fr.atlasworld.protocol.event.socket.SocketOpenedEvent;
 import fr.atlasworld.protocol.packet.Packet;
 import fr.atlasworld.protocol.socket.init.ServerSocketInitializer;
 import fr.atlasworld.registry.Registry;
@@ -31,7 +33,7 @@ public class ServerSocketImpl implements ServerSocket {
 
     private final Registry<Packet> registry;
     private final EventNode<Event> rootNode;
-    private final EventNode<ConnectionEvent> node;
+    private final EventNode<NetworkEvent> node;
 
     private final long defaultTimeout;
     private final ConnectionGroupImpl globalConnectionGroup;
@@ -47,15 +49,15 @@ public class ServerSocketImpl implements ServerSocket {
 
         this.registry = registry;
         this.rootNode = rootNode;
-        this.node = this.rootNode.createChildNode("server-socket-" + this.hashCode(), ConnectionEvent.class,
-                event -> event.connection().socket() == this);
+        this.node = this.rootNode.createChildNode("server-socket-" + this.hashCode(), NetworkEvent.class,
+                event -> event.socket() == this);
 
         this.defaultTimeout = defaultTimeout;
         this.globalConnectionGroup = new ConnectionGroupImpl();
 
         this.bootstrap = bootstrap;
         this.bootstrap.channel(NioServerSocketChannel.class);
-        this.bootstrap.childHandler(new ServerSocketInitializer());
+        this.bootstrap.childHandler(new ServerSocketInitializer(this));
     }
 
     @Override
@@ -69,7 +71,7 @@ public class ServerSocketImpl implements ServerSocket {
     }
 
     @Override
-    public EventNode<ConnectionEvent> eventNode() {
+    public EventNode<NetworkEvent> eventNode() {
         return this.node;
     }
 
@@ -112,10 +114,16 @@ public class ServerSocketImpl implements ServerSocket {
             this.serverChannel = bindFuture.channel();
             this.running = true;
 
+            CompletableFuture.runAsync(() -> {
+                this.rootNode.callEvent(new SocketOpenedEvent(this));
+            });
+
             this.serverChannel.closeFuture().addListener(closeFuture -> {
                 this.running = false;
+                this.serverChannel = null;
 
                 this.cleanUp();
+                this.rootNode.callEvent(new SocketClosedEvent(this));
             });
         });
 
@@ -128,7 +136,7 @@ public class ServerSocketImpl implements ServerSocket {
             throw new IllegalStateException("Socket is not running!");
 
         if (!interrupt)
-            this.globalConnectionGroup.disconnect(true).join();
+            this.globalConnectionGroup.disconnect("Server Stopping!").join();
 
         return ApiBridge.waitOnChannel(this.serverChannel.close());
     }

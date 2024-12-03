@@ -1,7 +1,6 @@
 package fr.atlasworld.protocol.security;
 
 import fr.atlasworld.protocol.connection.InsecureConnection;
-import fr.atlasworld.protocol.event.ConnectionRefusedEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.security.PublicKey;

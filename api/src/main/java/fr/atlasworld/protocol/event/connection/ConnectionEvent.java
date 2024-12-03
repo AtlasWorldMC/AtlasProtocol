@@ -1,19 +1,19 @@
-package fr.atlasworld.protocol.event;
+package fr.atlasworld.protocol.event.connection;
 
 import com.google.common.base.Preconditions;
 import fr.atlasworld.event.api.Event;
 import fr.atlasworld.protocol.connection.Connection;
+import fr.atlasworld.protocol.event.NetworkEvent;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Network Event, simple group to represent network specific events.
  */
-public abstract class ConnectionEvent implements Event {
+public abstract class ConnectionEvent extends NetworkEvent {
     protected final Connection connection;
 
     public ConnectionEvent(@NotNull Connection connection) {
-        Preconditions.checkNotNull(connection);
-
+        super(connection.socket()); // Throw NullPointerException if connection is null.
         this.connection = connection;
     }
 
@@ -23,7 +23,7 @@ public abstract class ConnectionEvent implements Event {
      * @return connection.
      */
     @NotNull
-    public Connection connection() {
+    public final Connection connection() {
         return this.connection;
     }
 }

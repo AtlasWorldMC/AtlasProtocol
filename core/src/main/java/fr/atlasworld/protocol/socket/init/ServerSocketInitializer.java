@@ -2,9 +2,7 @@ package fr.atlasworld.protocol.socket.init;
 
 import fr.atlasworld.protocol.handler.CodecHandler;
 import fr.atlasworld.protocol.handler.ExecutorHandler;
-import fr.atlasworld.protocol.socket.ServerSocket;
 import fr.atlasworld.protocol.socket.ServerSocketImpl;
-import fr.atlasworld.protocol.socket.Socket;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;

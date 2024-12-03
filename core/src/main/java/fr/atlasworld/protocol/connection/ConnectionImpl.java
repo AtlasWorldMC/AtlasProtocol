@@ -2,9 +2,14 @@ package fr.atlasworld.protocol.connection;
 
 import com.google.common.base.Preconditions;
 import com.google.protobuf.Message;
+import fr.atlasworld.event.api.Event;
 import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.protocol.ApiBridge;
-import fr.atlasworld.protocol.event.ConnectionEvent;
+import fr.atlasworld.protocol.event.connection.ConnectionEstablishedEvent;
+import fr.atlasworld.protocol.event.connection.ConnectionEvent;
+import fr.atlasworld.protocol.event.connection.ConnectionTerminatedEvent;
+import fr.atlasworld.protocol.event.connection.ConnectionValidatedEvent;
+import fr.atlasworld.protocol.generated.DisconnectWrapper;
 import fr.atlasworld.protocol.generated.EmptyWrapper;
 import fr.atlasworld.protocol.handler.PacketPackage;
 import fr.atlasworld.protocol.handler.ResponseHandler;
@@ -36,31 +41,52 @@ public class ConnectionImpl implements Connection {
     private final Map<UUID, ResponseHandler> awaitingResponses;
 
     private final Channel channel;
+    private final Socket socket;
+
+    // Connection Settings
     private final UUID identifier;
     private final PublicKey key;
     private final AtomicLong timeout;
-
-    private final Socket socket;
+    private final boolean customAuth;
 
     private volatile int ping;
+    private volatile boolean validated;
+
+    private final EventNode<Event> rootNode;
     private final EventNode<ConnectionEvent> node;
 
-    public ConnectionImpl(Channel channel, UUID identifier, PublicKey key, Socket socket, long timeout) {
+    private volatile ConnectionTerminatedEvent.Cause disconnectCause;
+    private volatile String disconnectReason;
+
+    public ConnectionImpl(Channel channel, UUID identifier, PublicKey key, Socket socket, long timeout, boolean customAuth, EventNode<Event> rootNode) {
         this.awaitingResponses = new ConcurrentHashMap<>();
 
         this.channel = channel;
+        this.socket = socket;
+
         this.identifier = identifier;
         this.key = key;
         this.timeout = new AtomicLong(timeout);
-        this.socket = socket;
+        this.customAuth = customAuth;
 
         this.ping = -1;
+        this.validated = false;
+
+        this.rootNode = rootNode;
         this.node = socket.eventNode()
-                .createChildNode(String.format(NODE_NAME, this.channel.remoteAddress(), this.hashCode()));
+                .createChildNode(String.format(NODE_NAME, this.channel.remoteAddress(), this.hashCode()), ConnectionEvent.class);
+
+        // Events
+        CompletableFuture.runAsync(() -> this.rootNode.callEvent(new ConnectionEstablishedEvent(this)));
+        this.channel.closeFuture().addListener(closeFuture -> {
+            this.rootNode.callEvent(new ConnectionTerminatedEvent(this, this.validated,
+                    this.disconnectCause == null ? ConnectionTerminatedEvent.Cause.INTERRUPTED : this.disconnectCause,
+                    this.disconnectReason));
+        });
     }
 
     @Override
-    public EventNode<ConnectionEvent> eventNode() {
+    public @NotNull EventNode<ConnectionEvent> eventNode() {
         return this.node;
     }
 
@@ -116,11 +142,37 @@ public class ConnectionImpl implements Connection {
     }
 
     @Override
-    public @NotNull CompletableFuture<Void> disconnect(boolean force) {
+    public @NotNull CompletableFuture<Void> disconnect(String reason) {
+        Preconditions.checkNotNull(reason);
+
         if (!this.channel.isActive())
             throw new IllegalStateException("Connection Disconnected!");
 
-        this.sendPacket(ApiBridge.DISCONNECT_PACKET, EmptyWrapper.Empty.newBuilder().build());
+        long currentTimeout = this.timeout.get(); // Makes sure the sent packet and the scheduler have the same timeout.
+        PacketPackage packet = PacketPackage.createRequestPackage(currentTimeout, ApiBridge.DISCONNECT_PACKET,
+                DisconnectWrapper.Disconnect.newBuilder().setMessage(reason).build());
+
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        this.channel.writeAndFlush(packet).addListener(writeFuture -> {
+            if (!writeFuture.isSuccess()) {
+                future.completeExceptionally(writeFuture.cause());
+                this.channel.close();
+                return;
+            }
+
+            this.markDisconnection(ConnectionTerminatedEvent.Cause.DISCONNECTED, reason);
+
+            this.channel.close().addListener(closeFuture -> {
+                if (!closeFuture.isSuccess()) {
+                    future.completeExceptionally(closeFuture.cause());
+                    return;
+                }
+
+                future.complete(null);
+            });
+        });
+
+        return future;
     }
 
     @Override
@@ -182,5 +234,22 @@ public class ConnectionImpl implements Connection {
             if (handler.timeout())
                 this.awaitingResponses.remove(identifier);
         }, timeout, TimeUnit.MILLISECONDS);
+    }
+
+    public synchronized void validate() {
+        if (this.validated)
+            throw new IllegalStateException("Connection is already validated!");
+
+        this.validated = true;
+        CompletableFuture.runAsync(() ->
+                this.rootNode.callEvent(new ConnectionValidatedEvent(this, this.customAuth)));
+    }
+
+    public synchronized void markDisconnection(ConnectionTerminatedEvent.Cause cause, String reason) {
+        if (this.disconnectCause != null || !this.channel.isActive())
+            throw new UnsupportedOperationException("The connection has already been marked as disconnected!");
+
+        this.disconnectCause = cause;
+        this.disconnectReason = reason;
     }
 }

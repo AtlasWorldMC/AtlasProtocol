@@ -2,7 +2,7 @@ package fr.atlasworld.protocol.connection;
 
 import com.google.protobuf.Message;
 import fr.atlasworld.event.api.EventNode;
-import fr.atlasworld.protocol.event.ConnectionEvent;
+import fr.atlasworld.protocol.event.connection.ConnectionEvent;
 import fr.atlasworld.protocol.packet.Response;
 import fr.atlasworld.registry.RegistryKey;
 import org.jetbrains.annotations.NotNull;
@@ -43,12 +43,14 @@ public interface ConnectionGroup {
     /**
      * Disconnects all connections in this group.
      *
-     * @param force disconnects the connection even if the disconnection failed,
-     *              this will simply interrupt the connection.
+     * @param reason reason for disconnecting.
      *
-     * @return future of the disconnecting of all connections.
+     * @return future of the disconnecting of all connections,
+     *         even if disconnecting gracefully fails the connection will still be closed.
+     *
+     * @see Connection#disconnect(String)
      */
-    CompletableFuture<Void> disconnect(boolean force);
+    CompletableFuture<Void> disconnect(@NotNull String reason);
 
     /**
      * Send a packet to all connections

@@ -9,6 +9,7 @@ import fr.atlasworld.protocol.packet.Packet;
 import fr.atlasworld.protocol.security.HandshakeHandler;
 import fr.atlasworld.registry.Registry;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.UnknownNullability;
 
 import java.net.InetSocketAddress;
 import java.security.PrivateKey;
@@ -19,7 +20,17 @@ import java.util.function.Predicate;
 /**
  * Client-Side socket, handles all the logic of the protocol.
  */
-public interface ClientSocket extends Socket, Connection {
+public interface ClientSocket extends Socket {
+
+    /**
+     * Retrieve the client connection.
+     *
+     * @return client connection.
+     *
+     * @throws IllegalStateException if the socket is not running.
+     */
+    @NotNull
+    Connection connection();
 
     /**
      * Builder to create a new {@link ClientSocket}.

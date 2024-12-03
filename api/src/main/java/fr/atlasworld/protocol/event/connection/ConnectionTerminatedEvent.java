@@ -1,20 +1,37 @@
-package fr.atlasworld.protocol.event;
+package fr.atlasworld.protocol.event.connection;
 
 import com.google.common.base.Preconditions;
 import fr.atlasworld.protocol.connection.Connection;
+import org.checkerframework.checker.units.qual.N;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Event Called when the connection has been terminated.
+ * Called when a connection has been terminated, this also includes not yet validated connections.
  */
 public class ConnectionTerminatedEvent extends ConnectionEvent {
+    private final boolean validated;
     private final Cause disconnectCause;
 
-    public ConnectionTerminatedEvent(@NotNull Connection connection, @NotNull Cause disconnectCause) {
+    @Nullable
+    private final String reason;
+
+    public ConnectionTerminatedEvent(@NotNull Connection connection, boolean validated, @NotNull Cause disconnectCause, @Nullable String reason) {
         super(connection);
 
         Preconditions.checkNotNull(disconnectCause);
+        this.validated = validated;
         this.disconnectCause = disconnectCause;
+        this.reason = reason;
+    }
+
+    /**
+     * Checks whether the terminated connection was validated.
+     *
+     * @return true connection validated, false otherwise.
+     */
+    public boolean validated() {
+        return this.validated;
     }
 
     /**
@@ -23,8 +40,20 @@ public class ConnectionTerminatedEvent extends ConnectionEvent {
      * @return the cause of the termination.
      */
     @NotNull
-    public Cause cause() {
+    public final Cause cause() {
         return this.disconnectCause;
+    }
+
+    /**
+     * Retrieve the reason of the disconnection.
+     * <p>
+     * Only present if {@link #cause()} returns {@link Cause#DISCONNECTED}.
+     *
+     * @return reason for the disconnection.
+     */
+    @Nullable
+    public final String reason() {
+        return this.reason;
     }
 
     /**

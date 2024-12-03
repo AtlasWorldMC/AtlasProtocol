@@ -40,6 +40,7 @@ public class ExecutorHandler extends ChannelInboundHandlerAdapter {
             throw new IllegalArgumentException("Unexpected Packet Type!");
         }
 
+        this.updatePing(packet);
         if (packet.header().isRequestHeader()) {
             this.handleRequest(packet);
             return;
@@ -72,6 +73,11 @@ public class ExecutorHandler extends ChannelInboundHandlerAdapter {
         }
 
 
+    }
+
+    private void updatePing(PacketBase packet) {
+        int currentPing = Math.round(System.currentTimeMillis() - packet.header().time());
+        packet.source().updatePing((currentPing + packet.source().ping()) / 2); // Lowers fluctuation
     }
 
     private void handleAck(PacketBase ack) {

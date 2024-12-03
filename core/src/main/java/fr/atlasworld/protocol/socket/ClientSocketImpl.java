@@ -1,18 +1,16 @@
 package fr.atlasworld.protocol.socket;
 
-import com.google.protobuf.Message;
 import fr.atlasworld.event.api.Event;
 import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.protocol.ApiBridge;
 import fr.atlasworld.protocol.Side;
 import fr.atlasworld.protocol.connection.ConnectionImpl;
-import fr.atlasworld.protocol.event.ConnectionEvent;
+import fr.atlasworld.protocol.event.NetworkEvent;
+import fr.atlasworld.protocol.event.socket.SocketClosedEvent;
+import fr.atlasworld.protocol.event.socket.SocketOpenedEvent;
 import fr.atlasworld.protocol.packet.Packet;
-import fr.atlasworld.protocol.packet.Response;
 import fr.atlasworld.protocol.socket.init.ClientSocketInitializer;
-import fr.atlasworld.protocol.socket.init.ServerSocketInitializer;
 import fr.atlasworld.registry.Registry;
-import fr.atlasworld.registry.RegistryKey;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -23,9 +21,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.net.InetSocketAddress;
 import java.security.KeyPair;
-import java.security.PublicKey;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -33,12 +28,13 @@ import java.util.concurrent.TimeUnit;
 public class ClientSocketImpl implements ClientSocket {
     private final UUID identifier;
     private final KeyPair sessionKeyPair;
+    private final boolean customAuth;
 
     private final InetSocketAddress address;
 
     private final Registry<Packet> registry;
     private final EventNode<Event> rootNode;
-    private final EventNode<ConnectionEvent> node;
+    private final EventNode<NetworkEvent> node;
 
     private final long defaultTimeout;
 
@@ -49,15 +45,16 @@ public class ClientSocketImpl implements ClientSocket {
 
     private volatile boolean running;
 
-    public ClientSocketImpl(InetSocketAddress address, UUID identifier, KeyPair sessionKeyPair, Registry<Packet> registry, EventNode<Event> rootNode, Bootstrap bootstrap, long timeout) {
+    public ClientSocketImpl(InetSocketAddress address, UUID identifier, KeyPair sessionKeyPair, boolean customConnection, Registry<Packet> registry, EventNode<Event> rootNode, Bootstrap bootstrap, long timeout) {
         this.identifier = identifier;
         this.address = address;
         this.sessionKeyPair = sessionKeyPair;
+        this.customAuth = customConnection;
 
         this.registry = registry;
         this.rootNode = rootNode;
-        this.node = this.rootNode.createChildNode("client-socket-" + this.hashCode(), ConnectionEvent.class,
-                event -> event.connection().socket() == this);
+        this.node = this.rootNode.createChildNode("client-socket-" + this.hashCode(), NetworkEvent.class,
+                event -> event.socket() == this);
 
         this.defaultTimeout = timeout;
 
@@ -67,70 +64,8 @@ public class ClientSocketImpl implements ClientSocket {
     }
 
     @Override
-    public EventNode<ConnectionEvent> eventNode() {
+    public EventNode<NetworkEvent> eventNode() {
         return this.node;
-    }
-
-    @Override
-    public @NotNull UUID identifier() {
-        return this.identifier;
-    }
-
-    @Override
-    public @NotNull PublicKey publicKey() {
-        return this.sessionKeyPair.getPublic();
-    }
-
-    @Override
-    public int ping() {
-        return this.connection == null ? -1 : this.connection.ping();
-    }
-
-    @Override
-    public boolean connected() {
-        return this.connection == null || this.connection.connected();
-    }
-
-    @Override
-    public @NotNull InetSocketAddress remoteAddress() {
-        return this.address;
-    }
-
-    @Override
-    public @NotNull <P extends Message> CompletableFuture<Response> sendPacket(@NotNull RegistryKey key, @NotNull P payload) {
-        if (this.connection == null)
-            throw new IllegalArgumentException("Connection Disconnected!");
-
-        return this.connection.sendPacket(key, payload);
-    }
-
-    @Override
-    public @NotNull CompletableFuture<Void> disconnect(boolean force) {
-        if (this.connection == null)
-            throw new IllegalArgumentException("Connection Disconnected!");
-
-        return this.connection.disconnect(force);
-    }
-
-    @Override
-    public @NotNull Duration timeout() {
-        if (this.connection == null)
-            return Duration.of(this.defaultTimeout, ChronoUnit.MILLIS);
-
-        return this.connection.timeout();
-    }
-
-    @Override
-    public void timeout(@NotNull Duration timeout) {
-        if (this.connection == null)
-            return;
-
-        this.connection.timeout(timeout);
-    }
-
-    @Override
-    public @NotNull Socket socket() {
-        return this;
     }
 
     @Override
@@ -166,14 +101,20 @@ public class ClientSocketImpl implements ClientSocket {
                 return;
             }
 
-            this.connection = new ConnectionImpl(future.channel(), this.identifier, this.sessionKeyPair.getPublic(),
-                    this, this.defaultTimeout);
             this.running = true;
+            CompletableFuture.runAsync(() -> {
+                this.rootNode.callEvent(new SocketOpenedEvent(this));
+            });
+
+            this.connection = new ConnectionImpl(future.channel(), this.identifier, this.sessionKeyPair.getPublic(),
+                    this, this.defaultTimeout, this.customAuth, this.rootNode);
 
             this.connection.channel().closeFuture().addListener(closeFuture -> {
                 this.running = false;
                 this.connection = null;
                 this.cleanUp();
+
+                this.rootNode.callEvent(new SocketClosedEvent(this));
             });
         });
 
@@ -186,7 +127,7 @@ public class ClientSocketImpl implements ClientSocket {
             throw new IllegalStateException("Socket is not running!");
 
         if (!interrupt)
-            this.connection.disconnect(true).join();
+            this.connection.disconnect("Client Stopping!").join();
 
         return ApiBridge.waitOnChannel(this.connection.channel().close());
     }
@@ -199,7 +140,12 @@ public class ClientSocketImpl implements ClientSocket {
         return this.registry;
     }
 
+    @NotNull
+    @Override
     public ConnectionImpl connection() {
+        if (!this.running || this.connection == null)
+            throw new IllegalStateException("Socket is not running!");
+
         return this.connection;
     }
 }

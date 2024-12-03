@@ -1,4 +1,4 @@
-package fr.atlasworld.protocol.event;
+package fr.atlasworld.protocol.event.connection;
 
 import com.google.common.base.Preconditions;
 import fr.atlasworld.protocol.connection.Connection;
@@ -32,7 +32,7 @@ public class ConnectionRefusedEvent extends ConnectionEvent {
     /**
      * Enum that contains all the possible causes for a refused connection.
      */
-    public static enum Cause {
+    public enum Cause {
 
         /**
          * The connection was refused because of en error or a network failure.

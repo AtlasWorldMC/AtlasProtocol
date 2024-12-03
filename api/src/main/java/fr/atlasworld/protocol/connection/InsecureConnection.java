@@ -1,6 +1,6 @@
 package fr.atlasworld.protocol.connection;
 
-import fr.atlasworld.protocol.event.ConnectionRefusedEvent;
+import fr.atlasworld.protocol.event.connection.ConnectionRefusedEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.UnknownNullability;
 

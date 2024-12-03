@@ -2,11 +2,12 @@ package fr.atlasworld.protocol.connection;
 
 import com.google.protobuf.Message;
 import fr.atlasworld.event.api.EventNode;
-import fr.atlasworld.protocol.event.ConnectionEvent;
+import fr.atlasworld.protocol.event.connection.ConnectionEvent;
 import fr.atlasworld.protocol.packet.Response;
 import fr.atlasworld.protocol.socket.Socket;
 import fr.atlasworld.registry.RegistryKey;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.UnknownNullability;
 
 import java.net.InetSocketAddress;
 import java.security.PublicKey;
@@ -26,6 +27,7 @@ public interface Connection {
      *
      * @return connection's event node.
      */
+    @NotNull
     EventNode<ConnectionEvent> eventNode();
 
     /**
@@ -36,7 +38,7 @@ public interface Connection {
      *
      * @return unique identifier of the connection.
      */
-    @NotNull
+    @UnknownNullability
     UUID identifier();
 
     /**
@@ -44,7 +46,7 @@ public interface Connection {
      *
      * @return public key of the connection.
      */
-    @NotNull
+    @UnknownNullability
     PublicKey publicKey();
 
     /**
@@ -62,7 +64,6 @@ public interface Connection {
      *
      * @return true if the connection is connected, false otherwise.
      */
-
     boolean connected();
 
     /**
@@ -88,13 +89,13 @@ public interface Connection {
     /**
      * Disconnects this connection.
      *
-     * @param force disconnects the connection even if the disconnection failed,
-     *              this will simply interrupt the connection.
+     * @param reason reason for disconnecting.
      *
-     * @return future that will be completed when the connection has been terminated.
+     * @return future of the connection termination,
+     *         even if the future fails the connection will still be closed.
      */
     @NotNull
-    CompletableFuture<Void> disconnect(boolean force);
+    CompletableFuture<Void> disconnect(String reason);
 
     /**
      * Current set timeout for the connection.

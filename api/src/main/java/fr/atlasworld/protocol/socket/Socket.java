@@ -3,7 +3,8 @@ package fr.atlasworld.protocol.socket;
 import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.protocol.Side;
 import fr.atlasworld.protocol.connection.Connection;
-import fr.atlasworld.protocol.event.ConnectionEvent;
+import fr.atlasworld.protocol.event.NetworkEvent;
+import fr.atlasworld.protocol.event.connection.ConnectionEvent;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
@@ -18,7 +19,7 @@ public interface Socket {
      *
      * @return event node of the socket.
      */
-    EventNode<ConnectionEvent> eventNode();
+    EventNode<NetworkEvent> eventNode();
 
     /**
      * Checks whether the socket is running.

@@ -3,7 +3,7 @@ package fr.atlasworld.protocol.connection;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.Message;
 import fr.atlasworld.event.api.EventNode;
-import fr.atlasworld.protocol.event.ConnectionEvent;
+import fr.atlasworld.protocol.event.connection.ConnectionEvent;
 import fr.atlasworld.protocol.packet.Response;
 import fr.atlasworld.registry.RegistryKey;
 import org.jetbrains.annotations.NotNull;
@@ -54,14 +54,16 @@ public class ConnectionGroupImpl implements ConnectionGroup {
 
     @Override
     @SuppressWarnings("unchecked")
-    public CompletableFuture<Void> disconnect(boolean force) {
+    public CompletableFuture<Void> disconnect(@NotNull String reason) {
+        Preconditions.checkNotNull(reason);
+
         CompletableFuture<Void>[] futures;
 
         this.lock.readLock().lock();
         try {
             futures = this.connections.values().stream()
                     .filter(ConnectionImpl::connected)
-                    .map(connection -> connection.disconnect(force))
+                    .map(connection -> connection.disconnect(reason))
                     .toArray(CompletableFuture[]::new);
         } finally {
             this.lock.readLock().unlock();
@@ -93,7 +95,7 @@ public class ConnectionGroupImpl implements ConnectionGroup {
     public Set<Connection> connections() {
         this.lock.readLock().lock();
         try {
-            return Collections.unmodifiableSet(this.connections);
+            return this.connections.values().stream().collect(Collectors.toUnmodifiableSet());
         } finally {
             this.lock.readLock().unlock();
         }
