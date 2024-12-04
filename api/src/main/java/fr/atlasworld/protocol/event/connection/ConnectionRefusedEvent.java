@@ -25,7 +25,7 @@ public class ConnectionRefusedEvent extends ConnectionEvent {
      * @return the cause.
      */
     @NotNull
-    public Cause cause() {
+    public final Cause cause() {
         return this.cause;
     }
 

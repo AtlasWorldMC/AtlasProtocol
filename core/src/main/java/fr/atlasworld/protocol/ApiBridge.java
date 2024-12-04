@@ -1,5 +1,6 @@
 package fr.atlasworld.protocol;
 
+import fr.atlasworld.protocol.connection.ConnectionImpl;
 import fr.atlasworld.registry.Registry;
 import fr.atlasworld.registry.RegistryKey;
 import io.netty.channel.ChannelFuture;
@@ -16,7 +17,7 @@ public class ApiBridge implements fr.atlasworld.protocol.internal.ApiBridge {
 
     public static final RegistryKey DISCONNECT_PACKET = new RegistryKey("system", "disconnect");
 
-    public static final AttributeKey<UUID> UNIQUE_ID_ATTRIBUTE = AttributeKey.newInstance("id");
+    public static final AttributeKey<ConnectionImpl> CONNECTION_ATTR = AttributeKey.newInstance("id");
 
     public static CompletableFuture<Void> waitOnChannel(ChannelFuture future) {
         CompletableFuture<Void> waitingFuture = new CompletableFuture<>();

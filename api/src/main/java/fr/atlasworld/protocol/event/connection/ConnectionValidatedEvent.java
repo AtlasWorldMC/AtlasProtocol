@@ -18,7 +18,7 @@ public class ConnectionValidatedEvent extends ConnectionEvent {
         this.usedCustomAuthentication = usedCustomAuthentication;
     }
 
-    public boolean usedCustomAuthentication() {
+    public final boolean usedCustomAuthentication() {
         return this.usedCustomAuthentication;
     }
 }

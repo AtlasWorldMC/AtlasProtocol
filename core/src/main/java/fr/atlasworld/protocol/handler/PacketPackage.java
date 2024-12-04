@@ -3,7 +3,12 @@ package fr.atlasworld.protocol.handler;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.Message;
 import fr.atlasworld.protocol.ApiBridge;
+import fr.atlasworld.protocol.connection.Connection;
+import fr.atlasworld.protocol.connection.ConnectionImpl;
 import fr.atlasworld.protocol.generated.HeaderWrapper;
+import fr.atlasworld.protocol.packet.Header;
+import fr.atlasworld.protocol.packet.PacketBase;
+import fr.atlasworld.protocol.packet.Request;
 import fr.atlasworld.registry.RegistryKey;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCounted;
@@ -42,6 +47,10 @@ public class PacketPackage {
 
     public UUID requestId() {
         return this.requestId;
+    }
+
+    public PacketBase asPacket(ConnectionImpl source) {
+        return new PacketBase(new Header(this.header, this.response), source, this.message.toByteArray());
     }
 
     public static PacketPackage createRequestPackage(long timeout, RegistryKey key, Message payload) {

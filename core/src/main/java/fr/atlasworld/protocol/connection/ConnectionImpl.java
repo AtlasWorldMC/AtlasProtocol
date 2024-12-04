@@ -5,14 +5,12 @@ import com.google.protobuf.Message;
 import fr.atlasworld.event.api.Event;
 import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.protocol.ApiBridge;
-import fr.atlasworld.protocol.event.connection.ConnectionEstablishedEvent;
-import fr.atlasworld.protocol.event.connection.ConnectionEvent;
-import fr.atlasworld.protocol.event.connection.ConnectionTerminatedEvent;
-import fr.atlasworld.protocol.event.connection.ConnectionValidatedEvent;
+import fr.atlasworld.protocol.event.connection.*;
 import fr.atlasworld.protocol.generated.DisconnectWrapper;
 import fr.atlasworld.protocol.generated.EmptyWrapper;
 import fr.atlasworld.protocol.handler.PacketPackage;
 import fr.atlasworld.protocol.handler.ResponseHandler;
+import fr.atlasworld.protocol.packet.PacketBase;
 import fr.atlasworld.protocol.packet.ResponderImpl;
 import fr.atlasworld.protocol.packet.Response;
 import fr.atlasworld.protocol.socket.Socket;
@@ -132,10 +130,14 @@ public class ConnectionImpl implements Connection {
 
         CompletableFuture<Response> future = new CompletableFuture<>();
         this.channel.writeAndFlush(packet).addListener(writeFuture -> {
-            if (!writeFuture.isSuccess())
+            if (!writeFuture.isSuccess()) {
                 future.completeExceptionally(writeFuture.cause());
+                this.rootNode.callEvent(new ConnectionExceptionEvent(this, writeFuture.cause()));
+                return;
+            }
 
             this.scheduleResponse(future, packet.requestId(), currentTimeout);
+            this.rootNode.callEvent(new ConnectionRequestSentEvent(this, packet.asPacket(this)));
         });
 
         return future;
@@ -183,7 +185,7 @@ public class ConnectionImpl implements Connection {
     @Override
     public void timeout(@NotNull Duration timeout) {
         Preconditions.checkNotNull(timeout);
-        Preconditions.checkArgument(timeout.isPositive() && !timeout.isZero(), "Timeout must be higher than 0!");
+        Preconditions.checkArgument(timeout.isPositive(), "Timeout must be higher than 0!");
 
         this.timeout.set(timeout.get(ChronoUnit.MILLIS));
     }
@@ -193,31 +195,8 @@ public class ConnectionImpl implements Connection {
         return this.socket;
     }
 
-    @ApiStatus.Internal
-    public Channel channel() {
-        return this.channel;
-    }
-
     public ResponderImpl createResponder(UUID requestIdentifier) {
         return new ResponderImpl(this.channel, requestIdentifier);
-    }
-
-    public void acknowledgeRequest(UUID identifier, long time) {
-        ResponseHandler handler = this.awaitingResponses.get(identifier);
-        handler.acknowledge();
-
-        TIMER.newTimeout(unused -> {
-            handler.timeoutAcknowledgement();
-            this.awaitingResponses.remove(identifier);
-        }, time, TimeUnit.MILLISECONDS);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (!(obj instanceof ConnectionImpl other))
-            return false;
-
-        return this.channel.equals(other.channel);
     }
 
     private void scheduleResponse(CompletableFuture<Response> future, UUID identifier, long timeout) {
@@ -231,9 +210,31 @@ public class ConnectionImpl implements Connection {
             if (!this.channel.isActive())
                 return;
 
-            if (handler.timeout())
-                this.awaitingResponses.remove(identifier);
+            if (!handler.timeout())
+                return;
+
+            this.awaitingResponses.remove(identifier);
+            this.rootNode.callEvent(new ConnectionRequestTimeoutEvent(this, Duration.of(timeout, ChronoUnit.MILLIS), false));
         }, timeout, TimeUnit.MILLISECONDS);
+    }
+
+    public void acknowledgeRequest(UUID identifier, long time) {
+        ResponseHandler handler = this.awaitingResponses.get(identifier);
+        handler.acknowledge();
+
+        TIMER.newTimeout(unused -> {
+            handler.timeoutAcknowledgement();
+            this.awaitingResponses.remove(identifier);
+            this.rootNode.callEvent(new ConnectionRequestTimeoutEvent(this, Duration.of(time, ChronoUnit.MILLIS), true));
+        }, time, TimeUnit.MILLISECONDS);
+    }
+
+    public void handleResponse(UUID identifier, PacketBase response) {
+        ResponseHandler handler = this.awaitingResponses.get(identifier);
+        if (handler == null) // Request Timed-out.
+            return;
+
+        handler.respond(response);
     }
 
     public synchronized void validate() {
@@ -251,5 +252,23 @@ public class ConnectionImpl implements Connection {
 
         this.disconnectCause = cause;
         this.disconnectReason = reason;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof ConnectionImpl other))
+            return false;
+
+        return this.channel.equals(other.channel);
+    }
+
+    @ApiStatus.Internal
+    public EventNode<Event> rootNode() {
+        return this.rootNode;
+    }
+
+    @ApiStatus.Internal
+    public Channel channel() {
+        return this.channel;
     }
 }

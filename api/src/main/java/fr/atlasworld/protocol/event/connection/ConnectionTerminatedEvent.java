@@ -30,7 +30,7 @@ public class ConnectionTerminatedEvent extends ConnectionEvent {
      *
      * @return true connection validated, false otherwise.
      */
-    public boolean validated() {
+    public final boolean validated() {
         return this.validated;
     }
 

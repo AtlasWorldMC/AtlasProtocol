@@ -65,7 +65,7 @@ public class PacketBase implements GenericPacket, Response, Request {
     private Method determineMethod(Class<? extends Message> type) throws NoSuchMethodException {
         WeakReference<Method> reference = CACHE.get(type);
 
-        if (reference == null || reference.get() == null) {
+        if (reference == null || reference.refersTo(null)) {
             reference = new WeakReference<>(type.getMethod("parseFrom", byte[].class));
 
             CACHE.put(type, reference);

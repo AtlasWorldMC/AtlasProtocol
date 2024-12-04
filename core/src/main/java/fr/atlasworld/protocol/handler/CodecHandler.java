@@ -114,14 +114,10 @@ public class CodecHandler extends ChannelDuplexHandler {
     }
 
     private ConnectionImpl connection(Channel channel, UUID communicationIdentifier) throws NetworkException {
-        UUID identifier = channel.attr(ApiBridge.UNIQUE_ID_ATTRIBUTE).get();
-        if (identifier == null)
-            throw new NetworkDeSyncException("Missing identifier attribute!", communicationIdentifier);
+        ConnectionImpl connection = channel.attr(ApiBridge.CONNECTION_ATTR).get();
+        if (connection == null)
+            throw new NetworkDeSyncException("Missing connection attribute!", communicationIdentifier);
 
-        if (this.socket instanceof ServerSocketImpl serverSocket)
-            return (ConnectionImpl) serverSocket.globalConnectionGroup().retrieveConnection(identifier)
-                    .orElseThrow(() -> new NetworkDeSyncException("Missing or disconnected connection!", communicationIdentifier));
-
-        return ((ClientSocketImpl) this.socket).connection();
+        return connection;
     }
 }

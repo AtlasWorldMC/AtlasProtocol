@@ -1,31 +1,49 @@
 package fr.atlasworld.protocol.handler;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import fr.atlasworld.common.logging.LogUtils;
+import fr.atlasworld.event.api.Event;
+import fr.atlasworld.event.api.EventNode;
+import fr.atlasworld.protocol.ApiBridge;
 import fr.atlasworld.protocol.connection.ConnectionImpl;
+import fr.atlasworld.protocol.event.EarlyNetworkFailureEvent;
+import fr.atlasworld.protocol.event.connection.ConnectionExceptionEvent;
+import fr.atlasworld.protocol.event.connection.ConnectionRequestReceivedEvent;
 import fr.atlasworld.protocol.exception.NetworkException;
-import fr.atlasworld.protocol.exception.request.PayloadInvalidException;
 import fr.atlasworld.protocol.exception.request.UnknownRequestException;
 import fr.atlasworld.protocol.exception.response.FailureNetworkException;
-import fr.atlasworld.protocol.exception.response.NetworkResponseException;
 import fr.atlasworld.protocol.generated.AcknowledgementWrapper;
+import fr.atlasworld.protocol.generated.EmptyWrapper;
 import fr.atlasworld.protocol.packet.Packet;
 import fr.atlasworld.protocol.packet.PacketBase;
 import fr.atlasworld.protocol.packet.PacketHandlerContextImpl;
 import fr.atlasworld.protocol.packet.ResponderImpl;
+import fr.atlasworld.protocol.socket.Socket;
 import fr.atlasworld.registry.Registry;
 import fr.atlasworld.registry.RegistryKey;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
+import org.slf4j.Logger;
 
+import java.lang.ref.WeakReference;
+import java.net.InetSocketAddress;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 public class ExecutorHandler extends ChannelInboundHandlerAdapter {
-    private final Registry<Packet> registry;
+    private static final Logger LOGGER = LogUtils.getLogger();
 
-    public ExecutorHandler(Registry<Packet> registry) {
+    private final Socket socket;
+    private final Registry<Packet> registry;
+    private final EventNode<Event> rootNode;
+
+    public ExecutorHandler(Socket socket, Registry<Packet> registry, EventNode<Event> rootNode) {
+        this.socket = socket;
         this.registry = registry;
+        this.rootNode = rootNode;
     }
 
     @Override
@@ -50,7 +68,11 @@ public class ExecutorHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void handleRequest(PacketBase request) throws NetworkException {
+        CompletableFuture.runAsync(() ->
+                request.source().rootNode().callEvent(new ConnectionRequestReceivedEvent(request.source(), request)));
+
         RegistryKey key = request.header().request();
+
         Packet packet = this.registry.retrieveValue(key)
                 .orElseThrow(() -> new UnknownRequestException("Unknown request: " + key, request.header().uniqueId()));
 
@@ -66,13 +88,13 @@ public class ExecutorHandler extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private void handleResponse(PacketBase response) throws NetworkResponseException {
+    private void handleResponse(PacketBase response) {
         if (response.header().responseCode() == 0) {
             this.handleAck(response);
             return;
         }
 
-
+        response.source().handleResponse(response.header().uniqueId(), response);
     }
 
     private void updatePing(PacketBase packet) {
@@ -91,5 +113,30 @@ public class ExecutorHandler extends ChannelInboundHandlerAdapter {
         }
 
         ack.source().acknowledgeRequest(identifier, timeout);
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        ConnectionImpl connection = this.connection(ctx.channel());
+        if (connection == null) {
+            this.rootNode.callEvent(new EarlyNetworkFailureEvent(this.socket, (InetSocketAddress) ctx.channel().remoteAddress()));
+            ctx.channel().close();
+            return;
+        }
+
+        CompletableFuture.runAsync(() -> this.rootNode.callEvent(new ConnectionExceptionEvent(connection, cause)));
+
+        if (!(cause instanceof NetworkException netExc))
+            return;
+
+        short code = (short) netExc.code();
+        UUID id = netExc.identifier();
+
+        PacketPackage failurePacket = PacketPackage.createResponsePackage(id, code, EmptyWrapper.Empty.newBuilder().build());
+        ctx.channel().writeAndFlush(failurePacket);
+    }
+
+    private ConnectionImpl connection(Channel channel) {
+        return channel.attr(ApiBridge.CONNECTION_ATTR).get();
     }
 }

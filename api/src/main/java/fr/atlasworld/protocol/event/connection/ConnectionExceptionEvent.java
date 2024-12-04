@@ -18,7 +18,7 @@ public class ConnectionExceptionEvent extends ConnectionEvent {
         this.cause = cause;
     }
 
-    public Throwable cause() {
+    public final Throwable cause() {
         return this.cause;
     }
 }

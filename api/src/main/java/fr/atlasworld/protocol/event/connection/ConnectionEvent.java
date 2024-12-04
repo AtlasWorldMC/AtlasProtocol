@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 public abstract class ConnectionEvent extends NetworkEvent {
     protected final Connection connection;
 
-    public ConnectionEvent(@NotNull Connection connection) {
+    protected ConnectionEvent(@NotNull Connection connection) {
         super(connection.socket()); // Throw NullPointerException if connection is null.
         this.connection = connection;
     }

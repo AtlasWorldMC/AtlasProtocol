@@ -11,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 public abstract class NetworkEvent implements Event {
     protected final Socket socket;
 
-    public NetworkEvent(@NotNull Socket socket) {
+    protected NetworkEvent(@NotNull Socket socket) {
         Preconditions.checkNotNull(socket);
 
         this.socket = socket;
