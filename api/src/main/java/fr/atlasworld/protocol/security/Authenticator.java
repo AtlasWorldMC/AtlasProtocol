@@ -1,6 +1,7 @@
 package fr.atlasworld.protocol.security;
 
 import fr.atlasworld.protocol.connection.InsecureConnection;
+import fr.atlasworld.protocol.exception.NetworkException;
 import org.jetbrains.annotations.NotNull;
 
 import java.security.PublicKey;
@@ -24,5 +25,5 @@ public interface Authenticator {
      *
      * @return public key determined for the connection.
      */
-    PublicKey authenticate(@NotNull InsecureConnection connection, @NotNull UUID uuid);
+    PublicKey authenticate(@NotNull InsecureConnection connection, @NotNull UUID uuid) throws NetworkException;
 }

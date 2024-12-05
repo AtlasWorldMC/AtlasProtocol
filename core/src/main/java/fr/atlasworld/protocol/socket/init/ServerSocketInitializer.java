@@ -20,6 +20,6 @@ public class ServerSocketInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline pipeline = ch.pipeline();
 
         pipeline.addLast(new CodecHandler(this.socket)); // Decode Requests
-        pipeline.addLast(new ExecutorHandler(this.socket.registry())); // Handles requests
+        pipeline.addLast(new ExecutorHandler(this.socket, this.socket.registry(), this.socket.rootNode())); // Handles requests
     }
 }

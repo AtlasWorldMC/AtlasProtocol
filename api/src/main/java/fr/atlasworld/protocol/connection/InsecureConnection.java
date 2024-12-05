@@ -1,9 +1,11 @@
 package fr.atlasworld.protocol.connection;
 
 import fr.atlasworld.protocol.event.connection.ConnectionRefusedEvent;
+import fr.atlasworld.protocol.security.Authenticator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.UnknownNullability;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.net.InetSocketAddress;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -13,7 +15,11 @@ import java.util.concurrent.CompletableFuture;
  * in this phase you have much more power on the connection.
  * <p>
  * But you cannot send packets nor disconnect the connection without explicitly refusing its connection.
+ * <p>
+ * This object should be kept in the {@link Authenticator#authenticate(InsecureConnection, UUID)} method,
+ * as this object is not thread-safe and should not get called on multiple threads.
  */
+@NotThreadSafe
 public interface InsecureConnection {
 
     /**
@@ -43,25 +49,17 @@ public interface InsecureConnection {
      *
      * @return future of the disconnection.
      *
-     * @throws UnsupportedOperationException if the connection is already marked as authenticated,
-     * or that the connection was attempted to be refused on the client.
+     * @throws IllegalStateException if the connection is already marked as authenticated,
+     *                               or that the connection has already been refused.
      */
     @NotNull
     CompletableFuture<Void> refuseConnection(@NotNull ConnectionRefusedEvent.Cause reason);
 
     /**
-     * Update identifier of this connection.
-     *
-     * @param identifier identifier to set.
-     *
-     * @throws UnsupportedOperationException if the identifier is already set.
-     */
-    void updateIdentifier(@NotNull UUID identifier);
-
-    /**
      * Authenticates the connections, this will mark the connection as trusted.
      *
-     * @throws IllegalStateException if the connection is already trusted.
+     * @throws IllegalStateException if the connection is already marked as authenticated,
+     *                               or that the connection has already been refused.
      * @throws UnsupportedOperationException if the authentication is managed internally,
      *                                       and does not allow to authenticate a method manually.
      */

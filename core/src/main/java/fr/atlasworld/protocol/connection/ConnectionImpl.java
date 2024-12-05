@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class ConnectionImpl implements Connection {
+public class ConnectionImpl implements Connection, InsecureConnection {
     private static final String NODE_NAME = "connection-%s-%s";
     private static final HashedWheelTimer TIMER = new HashedWheelTimer();
 
@@ -43,27 +43,28 @@ public class ConnectionImpl implements Connection {
 
     // Connection Settings
     private final UUID identifier;
-    private final PublicKey key;
     private final AtomicLong timeout;
     private final boolean customAuth;
+    private volatile PublicKey key;
 
     private volatile int ping;
     private volatile boolean validated;
 
+    // Event Node
     private final EventNode<Event> rootNode;
     private final EventNode<ConnectionEvent> node;
 
+    // Disconnect
     private volatile ConnectionTerminatedEvent.Cause disconnectCause;
     private volatile String disconnectReason;
 
-    public ConnectionImpl(Channel channel, UUID identifier, PublicKey key, Socket socket, long timeout, boolean customAuth, EventNode<Event> rootNode) {
+    public ConnectionImpl(Channel channel, UUID identifier, Socket socket, long timeout, boolean customAuth, EventNode<Event> rootNode) {
         this.awaitingResponses = new ConcurrentHashMap<>();
 
         this.channel = channel;
         this.socket = socket;
 
         this.identifier = identifier;
-        this.key = key;
         this.timeout = new AtomicLong(timeout);
         this.customAuth = customAuth;
 
@@ -98,6 +99,10 @@ public class ConnectionImpl implements Connection {
         return this.key;
     }
 
+    public synchronized void updateKey(PublicKey key) {
+        this.key = key;
+    }
+
     @Override
     public int ping() {
         return this.ping;
@@ -115,6 +120,32 @@ public class ConnectionImpl implements Connection {
     @Override
     public @NotNull InetSocketAddress remoteAddress() {
         return (InetSocketAddress) this.channel.remoteAddress();
+    }
+
+    @Override
+    public @NotNull CompletableFuture<Void> refuseConnection(ConnectionRefusedEvent.@NotNull Cause reason) {
+        if (this.validated)
+            throw new IllegalStateException("Unable to refuse connection on accepted or refused connection!");
+
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        this.channel.eventLoop().execute(() -> {
+            this.eventNode().callEvent(new ConnectionRefusedEvent(this, reason));
+            this.channel.close().syncUninterruptibly();
+            future.complete(null);
+        });
+
+        return future;
+    }
+
+    @Override
+    public void authenticate() {
+        if (this.validated)
+            throw new IllegalStateException("Unable to refuse connection on accepted or refused connection!");
+
+        if (!this.customAuth)
+            throw new UnsupportedOperationException("Connection is managed internally, authentication cannot be provided!");
+
+        // TODO: Custom Authentication
     }
 
     @Override

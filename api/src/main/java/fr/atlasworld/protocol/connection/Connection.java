@@ -38,13 +38,14 @@ public interface Connection {
      *
      * @return unique identifier of the connection.
      */
-    @UnknownNullability
+    @NotNull
     UUID identifier();
 
     /**
      * Retrieve the public key of the connection.
      *
-     * @return public key of the connection.
+     * @return public key of the connection,
+     *         or null if the connection has not been initialized.
      */
     @UnknownNullability
     PublicKey publicKey();

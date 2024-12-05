@@ -58,7 +58,8 @@ public class Header implements fr.atlasworld.protocol.packet.header.Header, Resp
             throw new UnsupportedOperationException("Only requests headers contains this field!");
 
         return RegistryKey.fromString(this.header.getRequest()).orElseThrow(() ->
-                new UnknownRequestException("Unknown request: " + this.header.getRequest()));
+                new UnknownRequestException("Unknown request: " + this.header.getRequest(),
+                        new UUID(this.header.getIdMostSig(), this.header.getIdLeastSig())));
     }
 
     public boolean isResponseHeader() {
