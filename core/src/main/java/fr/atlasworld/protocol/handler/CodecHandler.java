@@ -1,22 +1,16 @@
 package fr.atlasworld.protocol.handler;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import fr.atlasworld.protocol.ApiBridge;
-import fr.atlasworld.protocol.connection.Connection;
 import fr.atlasworld.protocol.connection.ConnectionImpl;
 import fr.atlasworld.protocol.exception.NetworkException;
-import fr.atlasworld.protocol.exception.request.NetworkDeSyncException;
 import fr.atlasworld.protocol.exception.request.PacketToBigException;
 import fr.atlasworld.protocol.exception.request.PacketInvalidException;
 import fr.atlasworld.protocol.generated.HeaderWrapper;
+import fr.atlasworld.protocol.handler.event.HandshakeFinishedEvent;
 import fr.atlasworld.protocol.packet.Header;
 import fr.atlasworld.protocol.packet.PacketBase;
-import fr.atlasworld.protocol.socket.ClientSocket;
-import fr.atlasworld.protocol.socket.ClientSocketImpl;
-import fr.atlasworld.protocol.socket.ServerSocketImpl;
 import fr.atlasworld.protocol.socket.Socket;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -24,14 +18,17 @@ import io.netty.util.ReferenceCountUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class CodecHandler extends ChannelDuplexHandler {
     private static final short MAX_HEADER_SIZE = 200;
 
-    private final Socket socket;
+    private BlockingQueue<ByteBuf> packetQueue;
+    private ConnectionImpl connection;
 
-    public CodecHandler(Socket socket) {
-        this.socket = socket;
+    public CodecHandler() {
+        this.packetQueue = new LinkedBlockingQueue<>();
     }
 
     @Override
@@ -58,6 +55,11 @@ public class CodecHandler extends ChannelDuplexHandler {
         buffer.writeBytes(header);
         buffer.writeShort(header.length);
 
+        if (this.connection == null) {
+            this.packetQueue.add(buffer); // Queue packets, prevents from sending packets while the handshake is still going.
+            return;
+        }
+
         ctx.write(buffer, promise);
     }
 
@@ -66,6 +68,11 @@ public class CodecHandler extends ChannelDuplexHandler {
         if (!ctx.channel().isActive()) {
             ReferenceCountUtil.release(msg);
             return;
+        }
+
+        if (this.connection == null) {
+            ReferenceCountUtil.release(msg);
+            throw new IllegalArgumentException("Handshake not finished, but packet was read on channel handler!");
         }
 
         if (!(msg instanceof ByteBuf buffer)) {
@@ -107,17 +114,33 @@ public class CodecHandler extends ChannelDuplexHandler {
             throw new PacketInvalidException("Header has a response code but also a request entry!",
                     new UUID(header.getIdMostSig(), header.getIdLeastSig()));
 
-        ConnectionImpl connection = this.connection(ctx.channel(), new UUID(header.getIdMostSig(), header.getIdLeastSig()));
-
-        PacketBase packet = new PacketBase(new Header(header, header.hasCode()), connection, payloadBytes);
+        PacketBase packet = new PacketBase(new Header(header, header.hasCode()), this.connection, payloadBytes);
         ctx.fireChannelRead(packet);
     }
 
-    private ConnectionImpl connection(Channel channel, UUID communicationIdentifier) throws NetworkException {
-        ConnectionImpl connection = channel.attr(ApiBridge.CONNECTION_ATTR).get();
-        if (connection == null)
-            throw new NetworkDeSyncException("Missing connection attribute!", communicationIdentifier);
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object event) throws Exception {
+        if (event instanceof HandshakeFinishedEvent(ConnectionImpl eventConnection)) {
+            this.connection = eventConnection;
 
-        return connection;
+            ChannelPromise lastWrite = ctx.newPromise();
+            while (!this.packetQueue.isEmpty()) {
+                ByteBuf buf = this.packetQueue.poll();
+
+                if (this.packetQueue.isEmpty()) { // Last packet.
+                    ctx.write(buf, lastWrite);
+                    continue;
+                }
+
+                ctx.write(buf);
+            }
+
+            lastWrite.addListener(future -> {
+                ctx.flush();
+                this.packetQueue = null; // Lose reference to the queue for GC
+            });
+        }
+
+        super.userEventTriggered(ctx, event); // Pass to next ChannelHandler
     }
 }

@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.security.PublicKey;
+import java.util.Map;
 
 /**
  * Server Information, sent when by the server when connecting to the server.
@@ -44,4 +45,12 @@ public interface ServerInfo {
      */
     @Nullable
     String get(String key);
+
+    /**
+     * Retrieve all added properties from the server.
+     *
+     * @return a map containing all sent properties.
+     */
+    @NotNull
+    Map<String, String> properties();
 }

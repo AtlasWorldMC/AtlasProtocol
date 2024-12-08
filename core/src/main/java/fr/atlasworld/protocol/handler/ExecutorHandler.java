@@ -14,6 +14,7 @@ import fr.atlasworld.protocol.exception.request.UnknownRequestException;
 import fr.atlasworld.protocol.exception.response.FailureNetworkException;
 import fr.atlasworld.protocol.generated.AcknowledgementWrapper;
 import fr.atlasworld.protocol.generated.EmptyWrapper;
+import fr.atlasworld.protocol.handler.event.HandshakeFinishedEvent;
 import fr.atlasworld.protocol.packet.Packet;
 import fr.atlasworld.protocol.packet.PacketBase;
 import fr.atlasworld.protocol.packet.PacketHandlerContextImpl;
@@ -40,6 +41,8 @@ public class ExecutorHandler extends ChannelInboundHandlerAdapter {
     private final Registry<Packet> registry;
     private final EventNode<Event> rootNode;
 
+    private ConnectionImpl connection;
+
     public ExecutorHandler(Socket socket, Registry<Packet> registry, EventNode<Event> rootNode) {
         this.socket = socket;
         this.registry = registry;
@@ -65,6 +68,14 @@ public class ExecutorHandler extends ChannelInboundHandlerAdapter {
         }
 
         this.handleResponse(packet);
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object event) throws Exception {
+        if (event instanceof HandshakeFinishedEvent(ConnectionImpl eventConnection))
+            this.connection = eventConnection;
+
+        super.userEventTriggered(ctx, event); // Pass event to next handler
     }
 
     private void handleRequest(PacketBase request) throws NetworkException {
@@ -117,7 +128,7 @@ public class ExecutorHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        ConnectionImpl connection = this.connection(ctx.channel());
+        ConnectionImpl connection = this.connection;
         if (connection == null) {
             this.rootNode.callEvent(new EarlyNetworkFailureEvent(this.socket, (InetSocketAddress) ctx.channel().remoteAddress()));
             ctx.channel().close();
@@ -134,9 +145,5 @@ public class ExecutorHandler extends ChannelInboundHandlerAdapter {
 
         PacketPackage failurePacket = PacketPackage.createResponsePackage(id, code, EmptyWrapper.Empty.newBuilder().build());
         ctx.channel().writeAndFlush(failurePacket);
-    }
-
-    private ConnectionImpl connection(Channel channel) {
-        return channel.attr(ApiBridge.CONNECTION_ATTR).get();
     }
 }

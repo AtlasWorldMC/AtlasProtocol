@@ -2,6 +2,8 @@ package fr.atlasworld.protocol.socket;
 
 import fr.atlasworld.common.annotation.OptionalBuilderArgument;
 import fr.atlasworld.common.annotation.RequiredBuilderArgument;
+import fr.atlasworld.event.api.Event;
+import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.protocol.AtlasProtocol;
 import fr.atlasworld.protocol.ServerInfo;
 import fr.atlasworld.protocol.connection.Connection;
@@ -9,9 +11,10 @@ import fr.atlasworld.protocol.packet.Packet;
 import fr.atlasworld.protocol.security.HandshakeHandler;
 import fr.atlasworld.registry.Registry;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.UnknownNullability;
 
 import java.net.InetSocketAddress;
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.time.Duration;
 import java.util.UUID;
@@ -55,6 +58,17 @@ public interface ClientSocket extends Socket {
         Builder connectAddress(@NotNull InetSocketAddress address);
 
         /**
+         * Define the root node, where socket events will be notified.
+         *
+         * @param rootNode rootNode to notify.
+         *
+         * @throws IllegalArgumentException if {@code rootNode}
+         * is not the root node of the tree.
+         */
+        @RequiredBuilderArgument
+        Builder rootNode(@NotNull EventNode<Event> rootNode);
+
+        /**
          * Sets the packet registry.
          *
          * @param registry registry containing the packets.
@@ -72,6 +86,17 @@ public interface ClientSocket extends Socket {
          */
         @RequiredBuilderArgument
         Builder authenticate(@NotNull UUID identifier, @NotNull PrivateKey challengeKey);
+
+        /**
+         * Sets the client authentication parameters required to authenticate to the server.
+         * <p>
+         * This uses the default authentication mechanism from the protocol.
+         *
+         * @param identifier identifier of the client.
+         * @param pair key pair used in the authentication challenge.
+         */
+        @RequiredBuilderArgument
+        Builder authenticate(@NotNull UUID identifier, @NotNull KeyPair pair);
 
         /**
          * Sets the handshake handler.
@@ -151,6 +176,6 @@ public interface ClientSocket extends Socket {
          * @throws IllegalArgumentException if not all methods with {@link RequiredBuilderArgument} we're called.
          */
         @NotNull
-        ClientSocket build();
+        ClientSocket build() throws GeneralSecurityException;
     }
 }

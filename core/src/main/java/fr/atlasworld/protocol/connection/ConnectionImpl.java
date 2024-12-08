@@ -48,7 +48,7 @@ public class ConnectionImpl implements Connection, InsecureConnection {
     private volatile PublicKey key;
 
     private volatile int ping;
-    private volatile boolean validated;
+    private volatile boolean authenticated;
 
     // Event Node
     private final EventNode<Event> rootNode;
@@ -69,7 +69,7 @@ public class ConnectionImpl implements Connection, InsecureConnection {
         this.customAuth = customAuth;
 
         this.ping = -1;
-        this.validated = false;
+        this.authenticated = false;
 
         this.rootNode = rootNode;
         this.node = socket.eventNode()
@@ -78,7 +78,7 @@ public class ConnectionImpl implements Connection, InsecureConnection {
         // Events
         CompletableFuture.runAsync(() -> this.rootNode.callEvent(new ConnectionEstablishedEvent(this)));
         this.channel.closeFuture().addListener(closeFuture -> {
-            this.rootNode.callEvent(new ConnectionTerminatedEvent(this, this.validated,
+            this.rootNode.callEvent(new ConnectionTerminatedEvent(this, this.authenticated,
                     this.disconnectCause == null ? ConnectionTerminatedEvent.Cause.INTERRUPTED : this.disconnectCause,
                     this.disconnectReason));
         });
@@ -124,7 +124,7 @@ public class ConnectionImpl implements Connection, InsecureConnection {
 
     @Override
     public @NotNull CompletableFuture<Void> refuseConnection(ConnectionRefusedEvent.@NotNull Cause reason) {
-        if (this.validated)
+        if (this.authenticated && !this.channel.isActive())
             throw new IllegalStateException("Unable to refuse connection on accepted or refused connection!");
 
         CompletableFuture<Void> future = new CompletableFuture<>();
@@ -139,7 +139,7 @@ public class ConnectionImpl implements Connection, InsecureConnection {
 
     @Override
     public void authenticate() {
-        if (this.validated)
+        if (this.authenticated && !this.channel.isActive())
             throw new IllegalStateException("Unable to refuse connection on accepted or refused connection!");
 
         if (!this.customAuth)
@@ -269,10 +269,10 @@ public class ConnectionImpl implements Connection, InsecureConnection {
     }
 
     public synchronized void validate() {
-        if (this.validated)
+        if (this.authenticated)
             throw new IllegalStateException("Connection is already validated!");
 
-        this.validated = true;
+        this.authenticated = true;
         CompletableFuture.runAsync(() ->
                 this.rootNode.callEvent(new ConnectionValidatedEvent(this, this.customAuth)));
     }
@@ -301,5 +301,13 @@ public class ConnectionImpl implements Connection, InsecureConnection {
     @ApiStatus.Internal
     public Channel channel() {
         return this.channel;
+    }
+
+    public boolean usesCustomAuth() {
+        return this.customAuth;
+    }
+
+    public boolean authenticated() {
+        return this.authenticated;
     }
 }

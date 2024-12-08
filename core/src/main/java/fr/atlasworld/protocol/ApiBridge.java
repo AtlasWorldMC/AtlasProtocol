@@ -1,6 +1,10 @@
 package fr.atlasworld.protocol;
 
 import fr.atlasworld.protocol.connection.ConnectionImpl;
+import fr.atlasworld.protocol.socket.ClientSocket;
+import fr.atlasworld.protocol.socket.ServerSocket;
+import fr.atlasworld.protocol.socket.builder.ClientSocketBuilder;
+import fr.atlasworld.protocol.socket.builder.ServerSocketBuilder;
 import fr.atlasworld.registry.Registry;
 import fr.atlasworld.registry.RegistryKey;
 import io.netty.channel.ChannelFuture;
@@ -16,8 +20,6 @@ public class ApiBridge implements fr.atlasworld.protocol.internal.ApiBridge {
     public static final Logger LOGGER = LoggerFactory.getLogger(AtlasProtocol.class);
 
     public static final RegistryKey DISCONNECT_PACKET = new RegistryKey("system", "disconnect");
-
-    public static final AttributeKey<ConnectionImpl> CONNECTION_ATTR = AttributeKey.newInstance("id");
 
     public static CompletableFuture<Void> waitOnChannel(ChannelFuture future) {
         CompletableFuture<Void> waitingFuture = new CompletableFuture<>();
@@ -37,5 +39,15 @@ public class ApiBridge implements fr.atlasworld.protocol.internal.ApiBridge {
         });
 
         return waitingFuture;
+    }
+
+    @Override
+    public ServerSocket.Builder createServer() {
+        return new ServerSocketBuilder();
+    }
+
+    @Override
+    public ClientSocket.Builder createClient() {
+        return new ClientSocketBuilder();
     }
 }

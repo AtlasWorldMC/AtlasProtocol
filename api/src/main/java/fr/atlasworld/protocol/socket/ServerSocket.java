@@ -2,6 +2,8 @@ package fr.atlasworld.protocol.socket;
 
 import fr.atlasworld.common.annotation.OptionalBuilderArgument;
 import fr.atlasworld.common.annotation.RequiredBuilderArgument;
+import fr.atlasworld.event.api.Event;
+import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.protocol.AtlasProtocol;
 import fr.atlasworld.protocol.connection.ConnectionGroup;
 import fr.atlasworld.protocol.packet.Packet;
@@ -11,6 +13,7 @@ import fr.atlasworld.registry.Registry;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.InetSocketAddress;
+import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.time.Duration;
 
@@ -70,9 +73,20 @@ public interface ServerSocket extends Socket {
         Builder authenticator(@NotNull Authenticator authenticator);
 
         /**
-         * Sets a custom handshake handle
-         * @param handler
-         * @return
+         * Define the root node, where socket events will be notified.
+         *
+         * @param rootNode rootNode to notify.
+         *
+         * @throws IllegalArgumentException if {@code rootNode}
+         * is not the root node of the tree.
+         */
+        @RequiredBuilderArgument
+        Builder rootNode(@NotNull EventNode<Event> rootNode);
+
+        /**
+         * Sets a custom handshake handler.
+         *
+         * @param handler handshake handler.
          */
         @OptionalBuilderArgument
         Builder handleHandshake(@NotNull HandshakeHandler handler);
@@ -92,7 +106,7 @@ public interface ServerSocket extends Socket {
          * @param value value of the property.
          */
         @OptionalBuilderArgument
-        Builder handshakeProperties(String key, String value);
+        Builder handshakeProperties(@NotNull String key, @NotNull String value);
 
         /**
          * Sets the timeout for a request to be responded to.
@@ -173,6 +187,6 @@ public interface ServerSocket extends Socket {
          * @throws IllegalArgumentException if not all methods with {@link RequiredBuilderArgument} we're called.
          */
         @NotNull
-        ServerSocket build();
+        ServerSocket build() throws GeneralSecurityException;
     }
 }

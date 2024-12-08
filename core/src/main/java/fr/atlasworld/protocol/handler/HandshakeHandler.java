@@ -1,46 +1,54 @@
 package fr.atlasworld.protocol.handler;
 
-import fr.atlasworld.common.security.Encryptor;
 import fr.atlasworld.protocol.exception.NetworkException;
 import fr.atlasworld.protocol.exception.NetworkTamperedException;
 import fr.atlasworld.protocol.exception.request.PacketInvalidException;
+import fr.atlasworld.protocol.handshake.ClientHandshake;
+import fr.atlasworld.protocol.handshake.Handshake;
+import fr.atlasworld.protocol.handshake.ServerHandshake;
+import fr.atlasworld.protocol.socket.ClientSocketImpl;
+import fr.atlasworld.protocol.socket.ServerSocketImpl;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 
-import javax.crypto.Mac;
-import javax.crypto.SecretKey;
+import javax.crypto.KeyGenerator;
+import java.security.KeyFactory;
 import java.security.MessageDigest;
 
-public class ServerHandshakeHandler extends ChannelDuplexHandler {
-    private static final String SIGNATURE_ALGORITHM = "HmacSHA256";
-    private static final String SECRET_KEY_ALGORITHM = "AES";
+public class HandshakeHandler extends ChannelDuplexHandler {
+    public static final String SIGNATURE_ALGORITHM = "HmacSHA256";
+    public static final String SECRET_KEY_ALGORITHM = "AES";
+    public static final String ASYMMETRIC_KEY_ALGORITHM = "RSA";
+
     private static final int MIN_PACKET_SIZE = 4;
 
-    private final byte[] serverInfo; // Use pre-parsed value for less calculation when initializing connection.
-    private final Encryptor sessionEcryptor;
+    private final Handshake handshake;
 
-    private boolean validated;
-    private SecretKey key;
-    private Encryptor encryptor;
-    private Mac signer;
+    public static HandshakeHandler createServer(ServerSocketImpl socket, KeyGenerator generator, byte[] serverInfo) {
+        ServerHandshake handshake = new ServerHandshake(socket, generator, serverInfo);
+        return new HandshakeHandler(handshake);
+    }
 
-    public ServerHandshakeHandler(byte[] serverInfo, Encryptor sessionEncryptor) {
-        this.serverInfo = serverInfo;
-        this.sessionEcryptor = sessionEncryptor;
+    public static HandshakeHandler createClient(ClientSocketImpl socket, KeyFactory factory) {
+        ClientHandshake handshake = new ClientHandshake(socket, factory);
+        return new HandshakeHandler(handshake);
+    }
 
-        this.validated = false;
+    private HandshakeHandler(Handshake handshake) {
+        this.handshake = handshake;
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        ByteBuf buf = ctx.alloc().buffer();
-        buf.writeBytes(this.serverInfo);
-        buf.writeInt(this.serverInfo.length);
+        this.handshake.initialize(ctx);
+    }
 
-        ctx.writeAndFlush(buf);
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) {
+        this.handshake.destroy(); // Destroy data
     }
 
     @Override
@@ -56,11 +64,11 @@ public class ServerHandshakeHandler extends ChannelDuplexHandler {
         }
 
         ByteBuf outBuf;
-        if (this.validated) { // Encrypting & Handshake completed.
+        if (this.handshake.finished()) { // Encrypting & Handshake completed.
             outBuf = ctx.alloc().buffer();
             this.encrypt(buf, outBuf);
         } else {
-            outBuf = buf;
+            outBuf = buf; // Write as is
         }
 
         ctx.write(outBuf, promise);
@@ -71,8 +79,11 @@ public class ServerHandshakeHandler extends ChannelDuplexHandler {
             throw new PacketInvalidException("Packet is too small!", NetworkException.UNDEFINED_COMMUNICATION_IDENTIFIER);
 
         try {
-            byte[] encryptedBytes = this.encryptor.encrypt(in.nioBuffer().array());
-            byte[] signature = this.signer.doFinal(encryptedBytes);
+            byte[] unencryptedBytes = new byte[in.readableBytes()];
+            in.readBytes(unencryptedBytes);
+
+            byte[] encryptedBytes = this.handshake.encryptor().encrypt(unencryptedBytes);
+            byte[] signature = this.handshake.signer().doFinal(encryptedBytes);
 
             out.writeBytes(encryptedBytes);
             out.writeBytes(signature);
@@ -99,13 +110,13 @@ public class ServerHandshakeHandler extends ChannelDuplexHandler {
             throw new IllegalArgumentException("Unexpected Packet Type!");
         }
 
-        if (this.validated) { // Encrypting & Handshake completed.
+        if (this.handshake.finished()) { // Encrypting & Handshake completed.
             ByteBuf outBuf = ctx.alloc().buffer();
             this.decrypt(buf, outBuf);
             ctx.fireChannelRead(outBuf);
         }
 
-        this.handleHandshake(buf, ctx);
+        this.handshake.handle(buf, ctx);
     }
 
     private void decrypt(ByteBuf in, ByteBuf out) throws NetworkException {
@@ -120,11 +131,11 @@ public class ServerHandshakeHandler extends ChannelDuplexHandler {
             byte[] encryptedBytes = new byte[in.readableBytes()];
             in.readBytes(encryptedBytes);
 
-            byte[] actualSignature = this.signer.doFinal(encryptedBytes);
+            byte[] actualSignature = this.handshake.signer().doFinal(encryptedBytes);
             if (MessageDigest.isEqual(actualSignature, signature))
                 throw new NetworkTamperedException("Packet signatures do not match!");
 
-            out.writeBytes(this.encryptor.decrypt(encryptedBytes));
+            out.writeBytes(this.handshake.encryptor().decrypt(encryptedBytes));
         } catch (Throwable e) {
             out.release(); // Release no longer useful buffer to prevent memory leaks
 
@@ -135,9 +146,5 @@ public class ServerHandshakeHandler extends ChannelDuplexHandler {
         } finally {
             in.release();
         }
-    }
-
-    private void handleHandshake(ByteBuf buf, ChannelHandlerContext ctx) throws NetworkException {
-
     }
 }

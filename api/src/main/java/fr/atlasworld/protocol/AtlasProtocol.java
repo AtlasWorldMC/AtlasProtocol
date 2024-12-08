@@ -11,6 +11,7 @@ import org.jetbrains.annotations.ApiStatus;
  * You can retrieve the protocol version and supported versions here.
  */
 public final class AtlasProtocol {
+    public static final int DEFAULT_PORT = 27717;
 
     /**
      * The current protocol version.
