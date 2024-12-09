@@ -30,23 +30,21 @@ import java.security.spec.InvalidKeySpecException;
 public final class ClientHandshake implements Handshake {
     private int state;
 
+    private final ClientSocketImpl socket;
+    private final KeyFactory factory;
+
+    private ConnectionImpl connection;
+
     private PublicKey serverKey;
     private SecretKey secretKey;
 
     private Encryptor encryptor;
     private Mac signer;
 
-    private final ClientSocketImpl socket;
-    private final ConnectionImpl connection;
-
-    private final KeyFactory factory;
-
     public ClientHandshake(ClientSocketImpl socket, KeyFactory factory) {
         this.state = 0;
 
         this.socket = socket;
-        this.connection = socket.connection();
-
         this.factory = factory;
     }
 
@@ -66,7 +64,7 @@ public final class ClientHandshake implements Handshake {
 
     @Override
     public void initialize(ChannelHandlerContext ctx) throws NetworkException {
-        // Do nothing at init
+        this.connection = this.socket.connection();
     }
 
     public void handle(ByteBuf packet, ChannelHandlerContext ctx) throws NetworkException {

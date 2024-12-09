@@ -145,14 +145,6 @@ public interface ClientSocket extends Socket {
         Builder connectTimeout(@NotNull Duration timeout);
 
         /**
-         * Whether the connection should stay alive.
-         * <p>
-         * Default: true
-         */
-        @OptionalBuilderArgument
-        Builder keepAlive(boolean keepAlive);
-
-        /**
          * Whether fast TCP should be enabled.
          * <p>
          * Default: false

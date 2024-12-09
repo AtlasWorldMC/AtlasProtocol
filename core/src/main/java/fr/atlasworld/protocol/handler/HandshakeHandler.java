@@ -1,5 +1,6 @@
 package fr.atlasworld.protocol.handler;
 
+import fr.atlasworld.protocol.ApiBridge;
 import fr.atlasworld.protocol.exception.NetworkException;
 import fr.atlasworld.protocol.exception.NetworkTamperedException;
 import fr.atlasworld.protocol.exception.request.PacketInvalidException;
@@ -43,11 +44,13 @@ public class HandshakeHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        ApiBridge.LOGGER.trace("Initializing new connection with '{}'..", ctx.channel().remoteAddress());
         this.handshake.initialize(ctx);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
+        ApiBridge.LOGGER.trace("Ended connection with '{}'.", ctx.channel().remoteAddress());
         this.handshake.destroy(); // Destroy data
     }
 

@@ -26,6 +26,6 @@ public class ClientSocketInitializer extends ChannelInitializer<SocketChannel> {
 
         pipeline.addLast(HandshakeHandler.createClient(this.socket, this.factory));
         pipeline.addLast(new CodecHandler()); // Decode Requests
-        pipeline.addLast(new ExecutorHandler(this.socket, this.socket.registry(), this.socket.connection().rootNode())); // Handles requests
+        pipeline.addLast(new ExecutorHandler(this.socket, this.socket.registry(), this.socket.rootNode())); // Handles requests
     }
 }

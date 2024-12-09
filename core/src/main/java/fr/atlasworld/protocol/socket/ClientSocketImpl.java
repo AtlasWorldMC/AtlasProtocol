@@ -20,7 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.InetSocketAddress;
@@ -29,7 +29,6 @@ import java.security.KeyPair;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 public class ClientSocketImpl implements ClientSocket {
@@ -82,7 +81,7 @@ public class ClientSocketImpl implements ClientSocket {
         this.handler = handler;
 
         this.bootstrap = bootstrap;
-        this.bootstrap.channel(NioServerSocketChannel.class);
+        this.bootstrap.channel(NioSocketChannel.class);
         this.bootstrap.handler(new ClientSocketInitializer(this));
     }
 
@@ -107,24 +106,26 @@ public class ClientSocketImpl implements ClientSocket {
     }
 
     @Override
-    public CompletableFuture<Void> start() {
+    public synchronized CompletableFuture<Void> start() {
         if (this.running)
             throw new IllegalStateException("Socket is already running!");
+
+        this.running = true;
 
         if (this.workerGroup == null || this.workerGroup.isTerminated() || this.workerGroup.isShuttingDown())
             this.workerGroup = new NioEventLoopGroup();
 
         ChannelFuture future = this.bootstrap
                 .group(this.workerGroup)
-                .bind(this.address);
+                .connect(this.address);
 
         future.addListener((ChannelFutureListener) bindFuture -> {
             if (!bindFuture.isSuccess()) {
+                this.running = false;
                 this.cleanUp();
                 return;
             }
 
-            this.running = true;
             CompletableFuture.runAsync(() -> {
                 this.rootNode.callEvent(new SocketOpenedEvent(this));
             });
@@ -170,6 +171,10 @@ public class ClientSocketImpl implements ClientSocket {
             throw new IllegalStateException("Socket is not running!");
 
         return this.connection;
+    }
+
+    public EventNode<Event> rootNode() {
+        return this.rootNode;
     }
 
     public boolean resolveCompatibility(ServerInfo serverInfo) {

@@ -8,9 +8,7 @@ dependencies {
 
     implementation "fr.atlasworld.common:security:${atlas_common_version}"
 
-    implementation "io.netty:netty-common:${netty_version}"
-    implementation "io.netty:netty-buffer:${netty_version}"
-    implementation "io.netty:netty-transport:${netty_version}"
+    implementation "io.netty:netty-all:${netty_version}"
 
     testImplementation "org.apache.logging.log4j:log4j-core:${log4j_version}"
     testImplementation "org.apache.logging.log4j:log4j-api:${log4j_version}"

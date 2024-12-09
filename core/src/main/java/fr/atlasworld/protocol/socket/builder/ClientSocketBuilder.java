@@ -48,6 +48,7 @@ public class ClientSocketBuilder implements ClientSocket.Builder {
         this.handshakeTimeout = Duration.ofMinutes(2).toMillis();
 
         this.customAuthentication = false;
+        this.compatibilityResolver = info -> true; // Always accept
 
         this.bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
     }
@@ -128,12 +129,6 @@ public class ClientSocketBuilder implements ClientSocket.Builder {
         Preconditions.checkArgument(timeout.toMillis() > 0, "Timeout cannot be negative!");
 
         this.handshakeTimeout = timeout.toMillis();
-        return this;
-    }
-
-    @Override
-    public ClientSocket.Builder keepAlive(boolean keepAlive) {
-        this.bootstrap.option(ChannelOption.SO_KEEPALIVE, keepAlive);
         return this;
     }
 
