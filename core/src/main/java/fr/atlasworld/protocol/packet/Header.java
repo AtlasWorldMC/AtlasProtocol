@@ -70,6 +70,11 @@ public class Header implements fr.atlasworld.protocol.packet.header.Header, Resp
         return !this.responseHeader;
     }
 
+    @Override
+    public String toString() {
+        return this.header.toString();
+    }
+
     public void copyTo(@NotNull HeaderWrapper.Header.Builder builder) {
         Preconditions.checkNotNull(builder);
 

@@ -106,7 +106,6 @@ public final class ClientHandshake implements Handshake {
         packet.readBytes(rawData);
 
         HandshakeWrapper.ServerInfo serverInfo = HandshakeWrapper.ServerInfo.parseFrom(rawData);
-        System.out.println(serverInfo);
 
         if (AtlasProtocol.PROTOCOL_VERSION != serverInfo.getVersion())
             throw new NetworkIncompatibleException("Protocol version does not match: " +

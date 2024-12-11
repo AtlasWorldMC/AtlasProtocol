@@ -100,7 +100,7 @@ public class ExecutorHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void handleResponse(PacketBase response) {
-        if (response.header().responseCode() == 0) {
+         if (response.header().responseCode() == 0) {
             this.handleAck(response);
             return;
         }

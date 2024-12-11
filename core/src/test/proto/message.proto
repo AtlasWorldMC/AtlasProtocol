@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+option java_package = "userend.generated";
+option java_outer_classname = "MessageWrapper";
+
+message Message {
+  string message = 1;
+}

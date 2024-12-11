@@ -39,14 +39,14 @@ public class ResponderImpl implements Responder {
             return CompletableFuture.completedFuture(null);
 
         AcknowledgementWrapper.Acknowledge acknowledge = AcknowledgementWrapper.Acknowledge
-                .newBuilder().setTimeout(timeout.get(ChronoUnit.MILLIS)).build();
+                .newBuilder().setTimeout(timeout.toMillis()).build();
         PacketPackage packet = PacketPackage.createResponsePackage(this.requestIdentifier, (short) 0, acknowledge);
 
         return ApiBridge.waitOnChannel(this.channel.writeAndFlush(packet));
     }
 
     @Override
-    public <M extends Message> CompletableFuture<Void> respond(M response, short code) {
+    public CompletableFuture<Void> respond(Message response, short code) {
         Preconditions.checkNotNull(response);
         Preconditions.checkArgument(code != 0, "Acknowledge code is not allowed, use #acknowledge().");
 

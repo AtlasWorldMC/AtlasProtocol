@@ -7,7 +7,10 @@ import fr.atlasworld.event.api.Event;
 import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.event.api.executor.EventExecutor;
 import fr.atlasworld.protocol.event.EarlyNetworkFailureEvent;
+import fr.atlasworld.protocol.event.connection.ConnectionExceptionEvent;
+import fr.atlasworld.protocol.packet.Packet;
 import fr.atlasworld.protocol.socket.ServerSocket;
+import fr.atlasworld.registry.Registry;
 import fr.atlasworld.registry.RegistryKey;
 import fr.atlasworld.registry.SimpleRegistry;
 import org.jetbrains.annotations.NotNull;
@@ -44,9 +47,12 @@ public class Server {
         PublicKey key = keyFactory.generatePublic(keySpec);
         EventNode<Event> root = EventNode.create("root");
 
+        Registry<Packet> registry = new SimpleRegistry<>(new RegistryKey("test", "packets"));
+        registry.register(MessagePacket.KEY, new MessagePacket());
+
         ServerSocket socket = ServerSocket.Builder.create()
                 .authenticator(((connection, id) -> key))
-                .registry(new SimpleRegistry<>(new RegistryKey("test", "packet")))
+                .registry(registry)
                 .rootNode(root)
                 .keepAlive(true)
                 .handshakeProperties("data", "dummy") // Dummy data for testing
@@ -61,5 +67,9 @@ public class Server {
             System.out.println("Event: " + event);
             return true;
         });
+
+        root.addListener(ConnectionExceptionEvent.class, event -> {
+            event.cause().printStackTrace();
+        }, builder -> builder.executor(EventExecutor.syncExecutor));
     }
 }

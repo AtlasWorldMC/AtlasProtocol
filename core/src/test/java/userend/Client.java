@@ -1,5 +1,6 @@
 package userend;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import fr.atlasworld.common.concurrent.action.FutureAction;
 import fr.atlasworld.common.logging.Level;
 import fr.atlasworld.common.logging.LogUtils;
@@ -8,9 +9,12 @@ import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.event.api.executor.EventExecutor;
 import fr.atlasworld.protocol.AtlasProtocol;
 import fr.atlasworld.protocol.event.EarlyNetworkFailureEvent;
+import fr.atlasworld.protocol.event.connection.ConnectionExceptionEvent;
+import fr.atlasworld.protocol.event.connection.ConnectionValidatedEvent;
 import fr.atlasworld.protocol.socket.ClientSocket;
 import fr.atlasworld.registry.RegistryKey;
 import fr.atlasworld.registry.SimpleRegistry;
+import userend.generated.MessageWrapper;
 
 import java.net.InetSocketAddress;
 import java.security.KeyFactory;
@@ -110,5 +114,27 @@ public class Client {
             System.out.println("Event: " + event);
             return true;
         });
+
+        root.addListener(ConnectionExceptionEvent.class, event -> {
+                event.cause().printStackTrace();
+            }, builder -> builder.executor(EventExecutor.syncExecutor));
+
+        root.addListener(ConnectionValidatedEvent.class, event -> {
+            MessageWrapper.Message message = MessageWrapper.Message.newBuilder().setMessage("Hello Server!").build();
+            event.connection().sendPacket(new RegistryKey("test", "message"), message)
+                    .whenComplete((response, cause) -> {
+                        if (cause != null) {
+                            System.err.println(cause);
+                        }
+                        try {
+                            System.out.println(response.header().responseCode());
+
+                            String messageResponse = response.payload(MessageWrapper.Message.class).getMessage();
+                            System.out.println(messageResponse);
+                        } catch (Throwable e) {
+                            e.printStackTrace();
+                        }
+            });
+        }, builder -> builder.executor(EventExecutor.syncExecutor));
     }
 }

@@ -67,7 +67,6 @@ public final class ServerHandshake implements Handshake {
         buf.writeInt(this.serverInfo.length);
         buf.writeBytes(this.serverInfo);
 
-        System.out.println("Sending " + buf.readableBytes() + "bytes.");
         ctx.writeAndFlush(buf);
     }
 
@@ -148,8 +147,6 @@ public final class ServerHandshake implements Handshake {
 
         buf.writeInt(data.length);
         buf.writeBytes(data);
-
-        System.out.println(data.length);
 
         Arrays.fill(data, (byte) 0x00); // Destroy Encoded key
 

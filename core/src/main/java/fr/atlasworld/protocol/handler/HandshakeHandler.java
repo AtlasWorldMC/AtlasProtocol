@@ -86,7 +86,7 @@ public class HandshakeHandler extends ChannelDuplexHandler {
             byte[] encryptedBytes = this.handshake.encryptor().encrypt(unencryptedBytes);
             byte[] signature = this.handshake.signer().doFinal(encryptedBytes);
 
-            out.writeInt(encryptedBytes.length + signature.length + Short.BYTES + Integer.BYTES); // Write the total length of the packet
+            out.writeInt(encryptedBytes.length + signature.length + Short.BYTES); // Write the total length of the packet
             out.writeShort(signature.length);
             out.writeBytes(signature);
             out.writeBytes(encryptedBytes);
@@ -101,8 +101,6 @@ public class HandshakeHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        System.out.println("Reading");
-
         if (!ctx.channel().isActive()) {
             ReferenceCountUtil.release(msg);
             return;
@@ -117,6 +115,7 @@ public class HandshakeHandler extends ChannelDuplexHandler {
             ByteBuf outBuf = ctx.alloc().buffer();
             this.decrypt(buf, outBuf);
             ctx.fireChannelRead(outBuf);
+            return;
         }
 
         this.handshake.handle(buf, ctx);
@@ -135,7 +134,7 @@ public class HandshakeHandler extends ChannelDuplexHandler {
             in.readBytes(encryptedBytes);
 
             byte[] actualSignature = this.handshake.signer().doFinal(encryptedBytes);
-            if (MessageDigest.isEqual(actualSignature, signature))
+            if (!MessageDigest.isEqual(actualSignature, signature))
                 throw new NetworkTamperedException("Packet signatures do not match!");
 
             out.writeBytes(this.handshake.encryptor().decrypt(encryptedBytes));
