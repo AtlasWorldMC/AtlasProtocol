@@ -25,7 +25,7 @@ public class ClientSocketInitializer extends ChannelInitializer<SocketChannel> {
     protected void initChannel(SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
 
-        pipeline.addLast(new LengthFieldBasedFrameDecoder(CodecHandler.MAX_PACKET_SIZE, 0, 4, 0, 0));
+        pipeline.addLast(new LengthFieldBasedFrameDecoder(CodecHandler.MAX_PACKET_SIZE, 0, Integer.BYTES, 0, Integer.BYTES));
         pipeline.addLast(HandshakeHandler.createClient(this.socket, this.factory));
         pipeline.addLast(new CodecHandler()); // Decode Requests
         pipeline.addLast(new ExecutorHandler(this.socket, this.socket.registry(), this.socket.rootNode())); // Handles requests

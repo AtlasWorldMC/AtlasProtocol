@@ -54,9 +54,9 @@ public class CodecHandler extends ChannelDuplexHandler {
         byte[] payload = packet.message().toByteArray();
         ByteBuf buffer = ctx.channel().alloc().directBuffer();
 
-        buffer.writeBytes(payload);
-        buffer.writeBytes(header);
         buffer.writeShort(header.length);
+        buffer.writeBytes(header);
+        buffer.writeBytes(payload);
 
         if (this.connection == null) {
             this.packetQueue.add(buffer); // Queue packets, prevents from sending packets while the handshake is still going.

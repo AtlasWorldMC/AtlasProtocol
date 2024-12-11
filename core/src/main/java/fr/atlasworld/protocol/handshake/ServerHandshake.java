@@ -64,8 +64,8 @@ public final class ServerHandshake implements Handshake {
     @Override
     public void initialize(ChannelHandlerContext ctx) throws NetworkException {
         ByteBuf buf = ctx.alloc().buffer();
+        buf.writeInt(this.serverInfo.length);
         buf.writeBytes(this.serverInfo);
-        buf.writeInt(this.serverInfo.length + Integer.BYTES);
 
         System.out.println("Sending " + buf.readableBytes() + "bytes.");
         ctx.writeAndFlush(buf);
@@ -145,8 +145,11 @@ public final class ServerHandshake implements Handshake {
 
         byte[] data = challenge.toByteArray();
         ByteBuf buf = ctx.alloc().buffer();
+
+        buf.writeInt(data.length);
         buf.writeBytes(data);
-        buf.writeInt(data.length + Integer.BYTES);
+
+        System.out.println(data.length);
 
         Arrays.fill(data, (byte) 0x00); // Destroy Encoded key
 
@@ -160,10 +163,9 @@ public final class ServerHandshake implements Handshake {
         byte[] rawData = new byte[packet.readableBytes()];
         packet.readBytes(rawData);
 
-        byte[] decryptedBytes = this.socket.serverEncryptor().decrypt(rawData);
-        HandshakeWrapper.Challenge challenge = HandshakeWrapper.Challenge.parseFrom(decryptedBytes);
+        HandshakeWrapper.Challenge challenge = HandshakeWrapper.Challenge.parseFrom(rawData);
 
-        byte[] keyBytes = challenge.getChallenge().toByteArray();
+        byte[] keyBytes = this.socket.serverEncryptor().decrypt(challenge.getChallenge().toByteArray());
         byte[] actualKeyBytes = this.secretKey.getEncoded();
 
         if (!MessageDigest.isEqual(keyBytes, actualKeyBytes)) {
@@ -180,7 +182,6 @@ public final class ServerHandshake implements Handshake {
     }
 
     private void sendSuccess(ChannelHandlerContext ctx) {
-        ctx.writeAndFlush(ctx.alloc().buffer().writeInt(Integer.BYTES)); // Simple Success Signal
         this.connection.validate();
 
         // Notify other handler of the authentication

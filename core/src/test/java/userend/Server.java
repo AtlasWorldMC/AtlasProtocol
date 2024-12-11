@@ -5,6 +5,8 @@ import fr.atlasworld.common.logging.Level;
 import fr.atlasworld.common.logging.LogUtils;
 import fr.atlasworld.event.api.Event;
 import fr.atlasworld.event.api.EventNode;
+import fr.atlasworld.event.api.executor.EventExecutor;
+import fr.atlasworld.protocol.event.EarlyNetworkFailureEvent;
 import fr.atlasworld.protocol.socket.ServerSocket;
 import fr.atlasworld.registry.RegistryKey;
 import fr.atlasworld.registry.SimpleRegistry;
@@ -40,16 +42,24 @@ public class Server {
         X509EncodedKeySpec keySpec = new X509EncodedKeySpec(PUBLIC_KEY);
 
         PublicKey key = keyFactory.generatePublic(keySpec);
-        EventNode<Event> rootNode = EventNode.create("root");
+        EventNode<Event> root = EventNode.create("root");
 
         ServerSocket socket = ServerSocket.Builder.create()
                 .authenticator(((connection, id) -> key))
                 .registry(new SimpleRegistry<>(new RegistryKey("test", "packet")))
-                .rootNode(rootNode)
+                .rootNode(root)
                 .keepAlive(true)
                 .handshakeProperties("data", "dummy") // Dummy data for testing
                 .build();
 
         socket.start().join(); // Wait on the server to boot.
+        root.addListener(EarlyNetworkFailureEvent.class, event -> {
+            System.out.println("Early Network Failure: " + event.cause());
+        }, builder -> builder.executor(EventExecutor.syncExecutor));
+
+        root.createChildNode("test", Event.class, event -> {
+            System.out.println("Event: " + event);
+            return true;
+        });
     }
 }

@@ -86,10 +86,10 @@ public class HandshakeHandler extends ChannelDuplexHandler {
             byte[] encryptedBytes = this.handshake.encryptor().encrypt(unencryptedBytes);
             byte[] signature = this.handshake.signer().doFinal(encryptedBytes);
 
-            out.writeBytes(encryptedBytes);
-            out.writeBytes(signature);
-            out.writeShort(signature.length);
             out.writeInt(encryptedBytes.length + signature.length + Short.BYTES + Integer.BYTES); // Write the total length of the packet
+            out.writeShort(signature.length);
+            out.writeBytes(signature);
+            out.writeBytes(encryptedBytes);
         } catch (Throwable e) {
             out.release(); // Failure release the outgoing buffer
 
@@ -101,6 +101,8 @@ public class HandshakeHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        System.out.println("Reading");
+
         if (!ctx.channel().isActive()) {
             ReferenceCountUtil.release(msg);
             return;

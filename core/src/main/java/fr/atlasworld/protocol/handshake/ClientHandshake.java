@@ -75,7 +75,6 @@ public final class ClientHandshake implements Handshake {
             switch (this.state) {
                 case 0 -> this.initialize(packet, ctx);
                 case 2 -> this.challenge(packet, ctx);
-                case 4 -> this.success(packet, ctx);
                 default -> throw new NetworkDeSyncException("Unknown network state: " + this.state,
                         NetworkException.UNDEFINED_COMMUNICATION_IDENTIFIER);
             }
@@ -107,13 +106,15 @@ public final class ClientHandshake implements Handshake {
         packet.readBytes(rawData);
 
         HandshakeWrapper.ServerInfo serverInfo = HandshakeWrapper.ServerInfo.parseFrom(rawData);
+        System.out.println(serverInfo);
+
         if (AtlasProtocol.PROTOCOL_VERSION != serverInfo.getVersion())
             throw new NetworkIncompatibleException("Protocol version does not match: " +
                     "[current: " + AtlasProtocol.PROTOCOL_VERSION + "; remote: " + serverInfo.getVersion() + "]");
 
         try {
             ServerInfoImpl info = new ServerInfoImpl(serverInfo, this.factory);
-            if (this.socket.resolveCompatibility(info))
+            if (!this.socket.resolveCompatibility(info))
                 throw new NetworkIncompatibleException("Client and Server are incompatible!");
 
             this.serverKey = info.key();
@@ -133,26 +134,29 @@ public final class ClientHandshake implements Handshake {
                 .setCustom(this.connection.usesCustomAuth())
                 .setIdLeastSig(this.connection.identifier().getLeastSignificantBits())
                 .setIdMostSig(this.connection.identifier().getMostSignificantBits())
-                .setPublicKey(ByteString.copyFrom(this.connection.publicKey().getEncoded()))
                 .build();
+
+        // TODO: Custom Auth
 
         byte[] data = initializePacket.toByteArray();
         ByteBuf buf = ctx.alloc().buffer();
 
+        buf.writeInt(data.length);
         buf.writeBytes(data);
-        buf.writeInt(data.length + Integer.BYTES);
 
         ctx.writeAndFlush(buf);
     }
 
     // State 2
-    private void challenge(ByteBuf packet, ChannelHandlerContext ctx) throws GeneralSecurityException {
+    private void challenge(ByteBuf packet, ChannelHandlerContext ctx) throws GeneralSecurityException, InvalidProtocolBufferException {
         this.state++;
 
         byte[] rawData = new byte[packet.readableBytes()];
         packet.readBytes(rawData);
 
-        byte[] keyBytes = this.socket.clientEncryptor().decrypt(rawData);
+        HandshakeWrapper.Challenge challenge = HandshakeWrapper.Challenge.parseFrom(rawData);
+
+        byte[] keyBytes = this.socket.clientEncryptor().decrypt(challenge.getChallenge().toByteArray());
         this.secretKey = new SecretKeySpec(keyBytes, HandshakeHandler.SECRET_KEY_ALGORITHM);
 
         this.encryptor = new SecretKeyEncryptor(this.secretKey);
@@ -171,18 +175,21 @@ public final class ClientHandshake implements Handshake {
 
         byte[] encryptedKeyBytes = cipher.doFinal(this.secretKey.getEncoded());
 
+        HandshakeWrapper.Challenge challenge = HandshakeWrapper.Challenge.newBuilder()
+                .setChallenge(ByteString.copyFrom(encryptedKeyBytes))
+                .build();
+
+        byte[] data = challenge.toByteArray();
+
         ByteBuf buf = ctx.alloc().buffer();
-        buf.writeBytes(encryptedKeyBytes);
-        buf.writeInt(encryptedKeyBytes.length + Integer.BYTES);
+        buf.writeInt(data.length);
+        buf.writeBytes(data);
 
-        ctx.writeAndFlush(buf);
-    }
+        ctx.writeAndFlush(buf).addListener(sendFuture -> {
+            this.connection.validate();
 
-    // State 4
-    private void success(ByteBuf packet, ChannelHandlerContext ctx) {
-        this.connection.validate();
-
-        // Notify other handler of the authentication
-        ctx.fireUserEventTriggered(new HandshakeFinishedEvent(this.connection));
+            // Notify other handler of the authentication
+            ctx.fireUserEventTriggered(new HandshakeFinishedEvent(this.connection));
+        });
     }
 }

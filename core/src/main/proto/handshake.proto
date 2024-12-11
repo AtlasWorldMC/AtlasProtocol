@@ -22,7 +22,7 @@ message Initialize {
   fixed64 id_least_sig = 2;
 
   bool custom = 3;
-  bytes public_key = 4;
+  optional bytes public_key = 4;
 }
 
 // State 2 and 3

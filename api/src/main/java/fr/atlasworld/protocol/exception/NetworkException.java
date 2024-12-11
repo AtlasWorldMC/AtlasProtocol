@@ -15,7 +15,7 @@ public class NetworkException extends IOException {
     private final UUID communicationIdentifier;
 
     public NetworkException(int code, UUID communicationIdentifier) {
-        Preconditions.checkArgument(code >= 200, "Network exception is out of range.");
+        Preconditions.checkArgument(code >= 200 || code < 0, "Network exception is out of range: " + code);
         Preconditions.checkNotNull(communicationIdentifier);
 
         this.code = code;
@@ -25,7 +25,7 @@ public class NetworkException extends IOException {
     public NetworkException(String message, int code, UUID communicationIdentifier) {
         super(message);
 
-        Preconditions.checkArgument(code >= 200, "Network exception is out of range.");
+        Preconditions.checkArgument(code >= 200 || code < 0, "Network exception is out of range: " + code);
         Preconditions.checkNotNull(communicationIdentifier);
 
         this.code = code;
@@ -35,7 +35,7 @@ public class NetworkException extends IOException {
     public NetworkException(String message, Throwable cause, int code, UUID communicationIdentifier) {
         super(message, cause);
 
-        Preconditions.checkArgument(code >= 200, "Network exception is out of range.");
+        Preconditions.checkArgument(code >= 200 || code < 0, "Network exception is out of range: " + code);
         Preconditions.checkNotNull(communicationIdentifier);
 
         this.code = code;
@@ -45,7 +45,7 @@ public class NetworkException extends IOException {
     public NetworkException(Throwable cause, int code, UUID communicationIdentifier) {
         super(cause);
 
-        Preconditions.checkArgument(code >= 200, "Network exception is out of range.");
+        Preconditions.checkArgument(code >= 200 || code < 0, "Network exception is out of range: " + code);
         Preconditions.checkNotNull(communicationIdentifier);
 
         this.code = code;
@@ -62,7 +62,11 @@ public class NetworkException extends IOException {
 
     @Override
     public String toString() {
-        return String.format("NetworkException [code=%d, identifier=%s]: %s",
-                this.code, this.communicationIdentifier, getMessage());
+        if (this.getCause() == null)
+            return String.format("NetworkException [code=%d, identifier=%s]: %s",
+                    this.code, this.communicationIdentifier, this.getMessage());
+
+        return String.format("NetworkException [code=%d, identifier=%s]: %s: %s",
+                this.code, this.communicationIdentifier, this.getMessage(), this.getCause());
     }
 }
