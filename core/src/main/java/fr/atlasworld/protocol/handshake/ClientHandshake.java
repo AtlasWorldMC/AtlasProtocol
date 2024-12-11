@@ -55,6 +55,9 @@ public final class ClientHandshake implements Handshake {
 
     @Override
     public void destroy() {
+        if (this.secretKey == null)
+            return;
+
         try {
             this.secretKey.destroy();
         } catch (DestroyFailedException e) {

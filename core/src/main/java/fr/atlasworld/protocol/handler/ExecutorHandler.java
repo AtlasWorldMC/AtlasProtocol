@@ -130,7 +130,7 @@ public class ExecutorHandler extends ChannelInboundHandlerAdapter {
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         ConnectionImpl connection = this.connection;
         if (connection == null) {
-            this.rootNode.callEvent(new EarlyNetworkFailureEvent(this.socket, (InetSocketAddress) ctx.channel().remoteAddress()));
+            this.rootNode.callEvent(new EarlyNetworkFailureEvent(this.socket, (InetSocketAddress) ctx.channel().remoteAddress(), cause));
             ctx.channel().close();
             return;
         }

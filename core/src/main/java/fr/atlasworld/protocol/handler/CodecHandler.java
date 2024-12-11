@@ -22,7 +22,10 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class CodecHandler extends ChannelDuplexHandler {
-    private static final short MAX_HEADER_SIZE = 200;
+    public static final short MAX_HEADER_SIZE = 200;
+
+    public static final int MIN_PACKET_SIZE = 4;
+    public static final int MAX_PACKET_SIZE = 4194304;
 
     private BlockingQueue<ByteBuf> packetQueue;
     private ConnectionImpl connection;

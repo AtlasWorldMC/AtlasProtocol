@@ -47,7 +47,7 @@ public class Server {
                 .registry(new SimpleRegistry<>(new RegistryKey("test", "packet")))
                 .rootNode(rootNode)
                 .keepAlive(true)
-                .handshakeProperties("date", "dummy") // Dummy data for testing
+                .handshakeProperties("data", "dummy") // Dummy data for testing
                 .build();
 
         socket.start().join(); // Wait on the server to boot.

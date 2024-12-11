@@ -10,6 +10,7 @@ import fr.atlasworld.protocol.socket.ServerSocketImpl;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import org.jetbrains.annotations.NotNull;
 
 import javax.crypto.KeyGenerator;
@@ -43,6 +44,7 @@ public class ServerSocketInitializer extends ChannelInitializer<SocketChannel> {
     protected void initChannel(@NotNull SocketChannel ch) throws Exception {
         ChannelPipeline pipeline = ch.pipeline();
 
+        pipeline.addLast(new LengthFieldBasedFrameDecoder(CodecHandler.MAX_PACKET_SIZE, 0, 4, 0, 4));
         pipeline.addLast(HandshakeHandler.createServer(this.socket, this.secretKeyGenerator, this.precalculatedServerInfo)); // Handle Handshake
         pipeline.addLast(new CodecHandler()); // Decode Requests
         pipeline.addLast(new ExecutorHandler(this.socket, this.socket.registry(), this.socket.rootNode())); // Handles requests

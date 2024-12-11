@@ -51,8 +51,10 @@ public final class ServerHandshake implements Handshake {
 
     @Override
     public void destroy() {
+        if (this.secretKey == null)
+            return;
+
         try {
-            this.secretKey.destroy();
             this.secretKey.destroy();
         } catch (DestroyFailedException e) {
             ApiBridge.LOGGER.warn("Failed to destroy inactive connection keys: ", e);
@@ -65,6 +67,7 @@ public final class ServerHandshake implements Handshake {
         buf.writeBytes(this.serverInfo);
         buf.writeInt(this.serverInfo.length + Integer.BYTES);
 
+        System.out.println("Sending " + buf.readableBytes() + "bytes.");
         ctx.writeAndFlush(buf);
     }
 

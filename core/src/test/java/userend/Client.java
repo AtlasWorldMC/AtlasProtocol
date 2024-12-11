@@ -5,7 +5,9 @@ import fr.atlasworld.common.logging.Level;
 import fr.atlasworld.common.logging.LogUtils;
 import fr.atlasworld.event.api.Event;
 import fr.atlasworld.event.api.EventNode;
+import fr.atlasworld.event.api.executor.EventExecutor;
 import fr.atlasworld.protocol.AtlasProtocol;
+import fr.atlasworld.protocol.event.EarlyNetworkFailureEvent;
 import fr.atlasworld.protocol.socket.ClientSocket;
 import fr.atlasworld.registry.RegistryKey;
 import fr.atlasworld.registry.SimpleRegistry;
@@ -99,8 +101,14 @@ public class Client {
                 .build();
 
         socket.start().join(); // Await start
-        while (true) {
-            Thread.sleep(100);
-        }
+
+        root.addListener(EarlyNetworkFailureEvent.class, event -> {
+            System.out.println("Early Network Failure: " + event.cause());
+        }, builder -> builder.executor(EventExecutor.syncExecutor));
+
+        root.createChildNode("test", Event.class, event -> {
+            System.out.println("Event: " + event);
+            return true;
+        });
     }
 }

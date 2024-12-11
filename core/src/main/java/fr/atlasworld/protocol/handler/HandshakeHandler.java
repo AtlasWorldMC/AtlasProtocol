@@ -24,8 +24,6 @@ public class HandshakeHandler extends ChannelDuplexHandler {
     public static final String SECRET_KEY_ALGORITHM = "AES";
     public static final String ASYMMETRIC_KEY_ALGORITHM = "RSA";
 
-    private static final int MIN_PACKET_SIZE = 4;
-
     private final Handshake handshake;
 
     public static HandshakeHandler createServer(ServerSocketImpl socket, KeyGenerator generator, byte[] serverInfo) {
@@ -78,7 +76,7 @@ public class HandshakeHandler extends ChannelDuplexHandler {
     }
 
     private void encrypt(ByteBuf in, ByteBuf out) throws NetworkException {
-        if (in.readableBytes() < MIN_PACKET_SIZE)
+        if (in.readableBytes() < CodecHandler.MIN_PACKET_SIZE)
             throw new PacketInvalidException("Packet is too small!", NetworkException.UNDEFINED_COMMUNICATION_IDENTIFIER);
 
         try {
@@ -123,7 +121,7 @@ public class HandshakeHandler extends ChannelDuplexHandler {
     }
 
     private void decrypt(ByteBuf in, ByteBuf out) throws NetworkException {
-        if (in.readableBytes() < MIN_PACKET_SIZE)
+        if (in.readableBytes() < CodecHandler.MIN_PACKET_SIZE)
             throw new PacketInvalidException("Packet is too small!", NetworkException.UNDEFINED_COMMUNICATION_IDENTIFIER);
 
         try {
