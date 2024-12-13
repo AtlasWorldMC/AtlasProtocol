@@ -60,7 +60,8 @@ public class ClientSocketImpl implements ClientSocket {
     public ClientSocketImpl(InetSocketAddress address, UUID identifier, KeyPair sessionKeyPair,
                             boolean customConnection, Registry<Packet> registry,
                             Predicate<ServerInfo> compatibilityResolver, EventNode<Event> rootNode,
-                            Bootstrap bootstrap, long timeout, long handshakeTimeout, HandshakeHandler handler) throws GeneralSecurityException {
+                            Bootstrap bootstrap, long timeout, long handshakeTimeout, HandshakeHandler handler,
+                            int rateLimit) throws GeneralSecurityException {
 
         this.identifier = identifier;
         this.address = address;
@@ -82,7 +83,7 @@ public class ClientSocketImpl implements ClientSocket {
 
         this.bootstrap = bootstrap;
         this.bootstrap.channel(NioSocketChannel.class);
-        this.bootstrap.handler(new ClientSocketInitializer(this));
+        this.bootstrap.handler(new ClientSocketInitializer(this, rateLimit));
     }
 
     @Override

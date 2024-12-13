@@ -36,6 +36,7 @@ public class ServerSocketBuilder implements ServerSocket.Builder {
     private Registry<Packet> registry;
     private EventNode<Event> rootNode;
 
+    private int rateLimit;
     private long requestTimeout;
     private long handshakeTimeout;
 
@@ -46,6 +47,8 @@ public class ServerSocketBuilder implements ServerSocket.Builder {
         this.bootstrap = new ServerBootstrap();
 
         this.address = new InetSocketAddress(AtlasProtocol.DEFAULT_PORT);
+
+        this.rateLimit = 50;
         this.requestTimeout = Duration.ofSeconds(30).toMillis();
         this.handshakeTimeout = Duration.ofMinutes(2).toMillis();
 
@@ -96,6 +99,14 @@ public class ServerSocketBuilder implements ServerSocket.Builder {
         Preconditions.checkNotNull(registry);
 
         this.registry = registry;
+        return this;
+    }
+
+    @Override
+    public ServerSocket.Builder rateLimit(int rateLimit) {
+        Preconditions.checkArgument(rateLimit > 0, "Rate limit may not be negative!");
+
+        this.rateLimit = rateLimit;
         return this;
     }
 
@@ -172,6 +183,7 @@ public class ServerSocketBuilder implements ServerSocket.Builder {
         Preconditions.checkNotNull(this.registry, "Missing packet registry, please provide one!");
 
         return new ServerSocketImpl(this.bootstrap, this.rootNode, this.address, this.keyPair, this.registry,
-                this.requestTimeout, this.handshakeTimeout, this.authenticator, this.handshakeHandler, this.properties);
+                this.requestTimeout, this.handshakeTimeout, this.authenticator, this.handshakeHandler, this.properties,
+                this.rateLimit);
     }
 }

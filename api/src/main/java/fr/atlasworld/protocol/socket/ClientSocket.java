@@ -7,6 +7,7 @@ import fr.atlasworld.event.api.EventNode;
 import fr.atlasworld.protocol.AtlasProtocol;
 import fr.atlasworld.protocol.ServerInfo;
 import fr.atlasworld.protocol.connection.Connection;
+import fr.atlasworld.protocol.exception.NetworkRateLimitedException;
 import fr.atlasworld.protocol.packet.Packet;
 import fr.atlasworld.protocol.security.HandshakeHandler;
 import fr.atlasworld.registry.Registry;
@@ -119,6 +120,23 @@ public interface ClientSocket extends Socket {
          */
         @OptionalBuilderArgument
         Builder compatibilityResolver(@NotNull Predicate<ServerInfo> resolver);
+
+        /**
+         * Sets the packet rate-limit <b>per second</b>, if this exceeds this limit the packet will be ignored and
+         * {@link NetworkRateLimitedException} will be thrown.
+         * <p>
+         * <b>Warning: </b> We speak about packets not requests,
+         * this includes acknowledgement, requests and response packets.
+         * <p>
+         * <b>Default: </b> 50 packets per seconds.
+         * <br>
+         *
+         * @param rateLimit amount of packets that can be sent per seconds.
+         *
+         * @throws IllegalArgumentException if {@code rateLimit} is negative or zero.
+         */
+        @OptionalBuilderArgument
+        Builder rateLimit(int rateLimit);
 
         /**
          * Sets the timeout for a request to be responded to.

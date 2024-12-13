@@ -20,12 +20,6 @@ public class MessagePacket implements Packet {
             throw new PayloadInvalidException(request.header().uniqueId(), e);
         }
 
-        ctx.responder().acknowledge();
-
-        try {
-            Thread.sleep(150000);
-        } catch (InterruptedException e) {}
-
         MessageWrapper.Message response = MessageWrapper.Message.newBuilder()
                 .setMessage("Hello Client!")
                 .build();

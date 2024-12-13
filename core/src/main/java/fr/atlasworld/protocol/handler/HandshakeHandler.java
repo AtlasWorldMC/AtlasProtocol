@@ -1,7 +1,9 @@
 package fr.atlasworld.protocol.handler;
 
+import com.google.common.util.concurrent.RateLimiter;
 import fr.atlasworld.protocol.ApiBridge;
 import fr.atlasworld.protocol.exception.NetworkException;
+import fr.atlasworld.protocol.exception.NetworkRateLimitedException;
 import fr.atlasworld.protocol.exception.NetworkTamperedException;
 import fr.atlasworld.protocol.exception.request.PacketInvalidException;
 import fr.atlasworld.protocol.handshake.ClientHandshake;
@@ -19,37 +21,41 @@ import javax.crypto.KeyGenerator;
 import java.security.KeyFactory;
 import java.security.MessageDigest;
 
+@SuppressWarnings("UnstableApiUsage")
 public class HandshakeHandler extends ChannelDuplexHandler {
     public static final String SIGNATURE_ALGORITHM = "HmacSHA256";
     public static final String SECRET_KEY_ALGORITHM = "AES";
     public static final String ASYMMETRIC_KEY_ALGORITHM = "RSA";
 
     private final Handshake handshake;
+    private final RateLimiter limiter;
 
-    public static HandshakeHandler createServer(ServerSocketImpl socket, KeyGenerator generator, byte[] serverInfo) {
+    public static HandshakeHandler createServer(ServerSocketImpl socket, KeyGenerator generator, byte[] serverInfo, int rateLimit) {
         ServerHandshake handshake = new ServerHandshake(socket, generator, serverInfo);
-        return new HandshakeHandler(handshake);
+        return new HandshakeHandler(handshake, rateLimit);
     }
 
-    public static HandshakeHandler createClient(ClientSocketImpl socket, KeyFactory factory) {
+    public static HandshakeHandler createClient(ClientSocketImpl socket, KeyFactory factory, int rateLimit) {
         ClientHandshake handshake = new ClientHandshake(socket, factory);
-        return new HandshakeHandler(handshake);
+        return new HandshakeHandler(handshake, rateLimit);
     }
 
-    private HandshakeHandler(Handshake handshake) {
+    private HandshakeHandler(Handshake handshake, int rateLimit) {
         this.handshake = handshake;
+        this.limiter = RateLimiter.create(rateLimit);
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         ApiBridge.LOGGER.trace("Initializing new connection with '{}'..", ctx.channel().remoteAddress());
         this.handshake.initialize(ctx);
+        super.channelActive(ctx);
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) {
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         ApiBridge.LOGGER.trace("Ended connection with '{}'.", ctx.channel().remoteAddress());
-        this.handshake.destroy(); // Destroy data
+        super.channelInactive(ctx);
     }
 
     @Override
@@ -101,6 +107,11 @@ public class HandshakeHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (!this.limiter.tryAcquire()) {
+            ReferenceCountUtil.release(msg);
+            throw new NetworkRateLimitedException("Request exceeds the allowed request rate limit.");
+        }
+
         if (!ctx.channel().isActive()) {
             ReferenceCountUtil.release(msg);
             return;

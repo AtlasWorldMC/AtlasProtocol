@@ -58,7 +58,8 @@ public class ServerSocketImpl implements ServerSocket {
 
     public ServerSocketImpl(ServerBootstrap bootstrap, EventNode<Event> rootNode, InetSocketAddress bindAddress,
                              KeyPair sessionKeyPair, Registry<Packet> registry, long defaultTimeout, long handshakeTimeout,
-                             Authenticator authenticator, HandshakeHandler handler, Map<String, String> properties) throws GeneralSecurityException {
+                             Authenticator authenticator, HandshakeHandler handler, Map<String, String> properties,
+                            int rateLimit) throws GeneralSecurityException {
         this.address = bindAddress;
         this.sessionKeyPair = sessionKeyPair;
         this.sessionEncryptor = new KeyPairEncryptor(this.sessionKeyPair);
@@ -77,7 +78,7 @@ public class ServerSocketImpl implements ServerSocket {
 
         this.bootstrap = bootstrap;
         this.bootstrap.channel(NioServerSocketChannel.class);
-        this.bootstrap.childHandler(new ServerSocketInitializer(this, properties));
+        this.bootstrap.childHandler(new ServerSocketInitializer(this, properties, rateLimit));
     }
 
     @Override

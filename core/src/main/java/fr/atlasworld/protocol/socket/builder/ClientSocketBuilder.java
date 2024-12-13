@@ -37,20 +37,20 @@ public class ClientSocketBuilder implements ClientSocket.Builder {
     private boolean customAuthentication;
     private Predicate<ServerInfo> compatibilityResolver;
 
+    private int rateLimit;
     private long requestTimeout;
     private long handshakeTimeout;
 
     public ClientSocketBuilder() {
         this.bootstrap = new Bootstrap();
-
         this.address = new InetSocketAddress(AtlasProtocol.DEFAULT_PORT);
-        this.requestTimeout = Duration.ofSeconds(30).toMillis();
-        this.handshakeTimeout = Duration.ofMinutes(2).toMillis();
 
         this.customAuthentication = false;
         this.compatibilityResolver = info -> true; // Always accept
 
-        this.bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
+        this.rateLimit = 50;
+        this.requestTimeout = Duration.ofSeconds(30).toMillis();
+        this.handshakeTimeout = Duration.ofMinutes(2).toMillis();
     }
 
     @Override
@@ -115,6 +115,14 @@ public class ClientSocketBuilder implements ClientSocket.Builder {
     }
 
     @Override
+    public ClientSocket.Builder rateLimit(int rateLimit) {
+        Preconditions.checkArgument(rateLimit > 0, "Rate limit may not be negative!");
+
+        this.rateLimit = rateLimit;
+        return this;
+    }
+
+    @Override
     public ClientSocket.Builder requestTimeout(@NotNull Duration timeout) {
         Preconditions.checkNotNull(timeout);
         Preconditions.checkArgument(timeout.toMillis() > 0, "Timeout cannot be negative!");
@@ -152,6 +160,6 @@ public class ClientSocketBuilder implements ClientSocket.Builder {
 
         return new ClientSocketImpl(this.address, this.identifier, this.keys, this.customAuthentication, this.registry,
                 this.compatibilityResolver, this.rootNode, this.bootstrap, this.requestTimeout, this.handshakeTimeout,
-                this.handshakeHandler);
+                this.handshakeHandler, this.rateLimit);
     }
 }

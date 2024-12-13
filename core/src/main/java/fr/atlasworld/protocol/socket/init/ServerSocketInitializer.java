@@ -22,11 +22,14 @@ public class ServerSocketInitializer extends ChannelInitializer<SocketChannel> {
     private final ServerSocketImpl socket;
     private final byte[] precalculatedServerInfo;
     private final KeyGenerator secretKeyGenerator;
+    private final int rateLimit;
 
-    public ServerSocketInitializer(ServerSocketImpl socket, Map<String, String> properties) throws GeneralSecurityException {
+    public ServerSocketInitializer(ServerSocketImpl socket, Map<String, String> properties, int rateLimit) throws GeneralSecurityException {
         this.socket = socket;
+        this.rateLimit = rateLimit;
 
         // Initialize everything now to prevent too much processing for new connections.
+        // Only one down-side, server information are static, maybe dynamic server info in the future ?
         HandshakeWrapper.ServerInfo.Builder info = HandshakeWrapper.ServerInfo.newBuilder()
                 .setPublicKey(ByteString.copyFrom(this.socket.sessionKeyPair().getPublic().getEncoded()))
                 .setVersion(AtlasProtocol.PROTOCOL_VERSION);
@@ -45,7 +48,7 @@ public class ServerSocketInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline pipeline = ch.pipeline();
 
         pipeline.addLast(new LengthFieldBasedFrameDecoder(CodecHandler.MAX_PACKET_SIZE, 0, Integer.BYTES, 0, Integer.BYTES));
-        pipeline.addLast(HandshakeHandler.createServer(this.socket, this.secretKeyGenerator, this.precalculatedServerInfo)); // Handle Handshake
+        pipeline.addLast(HandshakeHandler.createServer(this.socket, this.secretKeyGenerator, this.precalculatedServerInfo, this.rateLimit)); // Handle Handshake
         pipeline.addLast(new CodecHandler()); // Decode Requests
         pipeline.addLast(new ExecutorHandler(this.socket, this.socket.registry(), this.socket.rootNode())); // Handles requests
     }
