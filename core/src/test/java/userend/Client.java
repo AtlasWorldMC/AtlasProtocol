@@ -24,8 +24,6 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 public class Client {
-    public static final String CLIENT_ID = "cool_identifier";
-
     private static final byte[] PRIVATE_KEY = new byte[]{
             48, -126, 4, -67, 2, 1, 0, 48, 13, 6, 9, 42, -122, 72, -122, -9, 13, 1, 1, 1, 5, 0, 4, -126, 4, -89, 48,
             -126, 4, -93, 2, 1, 0, 2, -126, 1, 1, 0, -77, -117, 122, 62, -75, 42, 108, 39, 121, 87, 88, 0, -40, 23, -41,

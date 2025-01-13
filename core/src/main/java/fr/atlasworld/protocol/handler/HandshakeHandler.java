@@ -3,8 +3,8 @@ package fr.atlasworld.protocol.handler;
 import com.google.common.util.concurrent.RateLimiter;
 import fr.atlasworld.protocol.ApiBridge;
 import fr.atlasworld.protocol.exception.NetworkException;
-import fr.atlasworld.protocol.exception.NetworkRateLimitedException;
 import fr.atlasworld.protocol.exception.NetworkTamperedException;
+import fr.atlasworld.protocol.exception.RateExceededException;
 import fr.atlasworld.protocol.exception.request.PacketInvalidException;
 import fr.atlasworld.protocol.handshake.ClientHandshake;
 import fr.atlasworld.protocol.handshake.Handshake;
@@ -30,19 +30,19 @@ public class HandshakeHandler extends ChannelDuplexHandler {
     private final Handshake handshake;
     private final RateLimiter limiter;
 
-    public static HandshakeHandler createServer(ServerSocketImpl socket, KeyGenerator generator, byte[] serverInfo, int rateLimit) {
+    public static HandshakeHandler createServer(ServerSocketImpl socket, KeyGenerator generator, byte[] serverInfo) {
         ServerHandshake handshake = new ServerHandshake(socket, generator, serverInfo);
-        return new HandshakeHandler(handshake, rateLimit);
+        return new HandshakeHandler(handshake);
     }
 
-    public static HandshakeHandler createClient(ClientSocketImpl socket, KeyFactory factory, int rateLimit) {
+    public static HandshakeHandler createClient(ClientSocketImpl socket, KeyFactory factory) {
         ClientHandshake handshake = new ClientHandshake(socket, factory);
-        return new HandshakeHandler(handshake, rateLimit);
+        return new HandshakeHandler(handshake);
     }
 
-    private HandshakeHandler(Handshake handshake, int rateLimit) {
+    private HandshakeHandler(Handshake handshake) {
         this.handshake = handshake;
-        this.limiter = RateLimiter.create(rateLimit);
+        this.limiter = RateLimiter.create(50); // Max 50 requests per sec
     }
 
     @Override
@@ -109,7 +109,7 @@ public class HandshakeHandler extends ChannelDuplexHandler {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (!this.limiter.tryAcquire()) {
             ReferenceCountUtil.release(msg);
-            throw new NetworkRateLimitedException("Request exceeds the allowed request rate limit.");
+            throw new RateExceededException("Handshake request exceeded allowed values!");
         }
 
         if (!ctx.channel().isActive()) {

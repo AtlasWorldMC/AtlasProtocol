@@ -4,7 +4,6 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import fr.atlasworld.common.security.Encryptor;
 import fr.atlasworld.common.security.encryptor.SecretKeyEncryptor;
-import fr.atlasworld.protocol.ApiBridge;
 import fr.atlasworld.protocol.AtlasProtocol;
 import fr.atlasworld.protocol.ServerInfoImpl;
 import fr.atlasworld.protocol.connection.ConnectionImpl;
